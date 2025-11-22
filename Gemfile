@@ -4,5 +4,5 @@ source "https://rubygems.org"
 
 # gem "rails"
 source "https://rubygems.pkg.github.com/mark24code" do
-  gem "psd", "4.0.2"
+  gem "psd", "4.0.0"
 end
