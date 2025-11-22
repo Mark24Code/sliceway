@@ -2,6 +2,7 @@
 
 require_relative 'psd.rb/lib/psd'
 require 'json'
+require 'digest'
 
 class PSDExporter
   def initialize(psd_file_path, output_base_dir = 'output')
@@ -337,11 +338,20 @@ class PSDExporter
   end
 
   def generate_base_filename(slice, index)
-    name = slice.name || "slice_#{index}"
-    # 清理文件名中的非法字符
-    clean_name = name.gsub(/[^\w\s-]/, '_').gsub(/\s+/, '_')
-    # 添加ID确保唯一性
-    "#{clean_name}_#{slice.id}_#{index}"
+    # 生成6位hash确保唯一性
+    hash = Digest::MD5.hexdigest("#{slice.id}_#{index}_#{Time.now.to_f}")[0..5]
+
+    # 获取名称，如果没有则使用默认名称
+    name = slice.name || "slice"
+
+    # 清理文件名：去除非法字符，替换下划线为连字符，去除多余空格
+    clean_name = name.gsub(/[^\w\s\u4e00-\u9fa5-]/, '')  # 保留字母、数字、中文、空格、连字符
+                   .gsub(/[_\s]+/, '-')                  # 替换下划线和空格为连字符
+                   .gsub(/-+/, '-')                      # 合并多个连字符
+                   .gsub(/^-|-$/, '')                    # 去除开头和结尾的连字符
+
+    # 格式：id-文件名-6位hash
+    "#{slice.id}-#{clean_name}-#{hash}"
   end
 
   def clean_hash(hash)
