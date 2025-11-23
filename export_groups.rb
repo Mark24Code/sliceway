@@ -4,11 +4,13 @@ require_relative 'psd.rb/lib/psd'
 require 'json'
 require 'digest'
 require_relative 'progress_bar'
+require_relative 'export_tracker'
 
 class PSDGroupsExporter
   def initialize(psd_file_path, output_base_dir = 'output')
     @psd_file_path = psd_file_path
     @output_base_dir = output_base_dir
+    @tracker = ExportTracker.new
 
     # 创建基础输出目录
     Dir.mkdir(@output_base_dir) unless Dir.exist?(@output_base_dir)
@@ -80,7 +82,7 @@ class PSDGroupsExporter
     # puts "  可见性: #{group.visible? ? '可见' : '隐藏'}"
 
     # 生成基础文件名
-    base_filename = generate_base_filename(group, index)
+    base_filename = @tracker.generate_filename(group, :group)
 
     # 为每个组创建子目录
     group_dir = File.join(@images_dir, base_filename)
@@ -325,7 +327,7 @@ class PSDGroupsExporter
       },
 
       groups_summary: groups.map.with_index do |group, index|
-        base_filename = generate_base_filename(group, index + 1)
+        base_filename = @tracker.generate_filename(group, :group)
         is_real_group = group.respond_to?(:children) && group.respond_to?(:children_layers)
         {
           index: index + 1,
@@ -351,22 +353,6 @@ class PSDGroupsExporter
     puts "\n总体信息已保存: overall_info.json"
   end
 
-  def generate_base_filename(group, index)
-    # 生成6位hash确保唯一性
-    hash = Digest::MD5.hexdigest("#{group.id}_#{index}_#{Time.now.to_f}")[0..5]
-
-    # 获取名称，如果没有则使用默认名称
-    name = group.name || "group"
-
-    # 清理文件名：去除非法字符，替换下划线为连字符，去除多余空格
-    clean_name = name.gsub(/[^\w\s\u4e00-\u9fa5-]/, '')  # 保留字母、数字、中文、空格、连字符
-                   .gsub(/[_\s]+/, '-')                  # 替换下划线和空格为连字符
-                   .gsub(/-+/, '-')                      # 合并多个连字符
-                   .gsub(/^-|-$/, '')                    # 去除开头和结尾的连字符
-
-    # 格式：id-文件名-6位hash
-    "#{group.id}-#{clean_name}-#{hash}"
-  end
 
   def clean_hash(hash)
     return nil if hash.nil?
