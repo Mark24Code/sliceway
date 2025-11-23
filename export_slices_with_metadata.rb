@@ -3,6 +3,7 @@
 require_relative 'psd.rb/lib/psd'
 require 'json'
 require 'digest'
+require_relative 'progress_bar'
 
 class PSDExporter
   def initialize(psd_file_path, output_base_dir = 'output')
@@ -17,15 +18,15 @@ class PSDExporter
     puts "正在解析PSD文件: #{@psd_file_path}"
 
     PSD.open(@psd_file_path) do |psd|
-      puts "PSD文件信息:"
-      puts "  宽度: #{psd.header.width}"
-      puts "  高度: #{psd.header.height}"
-      puts "  颜色模式: #{psd.header.mode}"
-      puts "  通道数: #{psd.header.channels}"
+      # puts "PSD文件信息:"
+      # puts "  宽度: #{psd.header.width}"
+      # puts "  高度: #{psd.header.height}"
+      # puts "  颜色模式: #{psd.header.mode}"
+      # puts "  通道数: #{psd.header.channels}"
 
       # 获取切片
       slices = psd.slices
-      puts "\n找到 #{slices.size} 个切片"
+      # puts "\n找到 #{slices.size} 个切片"
 
       if slices.empty?
         puts "警告: 该PSD文件中没有找到切片"
@@ -37,7 +38,7 @@ class PSDExporter
       @export_dir = File.join(@output_base_dir, "slices_#{timestamp}")
       Dir.mkdir(@export_dir)
 
-      puts "\n导出目录: #{@export_dir}"
+      # puts "\n导出目录: #{@export_dir}"
 
       # 创建子目录结构
       @images_dir = File.join(@export_dir, 'images')
@@ -45,10 +46,16 @@ class PSDExporter
       Dir.mkdir(@images_dir)
       Dir.mkdir(@metadata_dir)
 
+      # 创建进度条
+      progress = ProgressBar.new(slices.size, prefix: "导出切片", width: 40)
+
       # 导出每个切片
       slices.each_with_index do |slice, index|
         export_slice_with_metadata(slice, index + 1, psd)
+        progress.increment(1)
       end
+
+      progress.finish("切片导出完成")
 
       # 导出总体信息
       export_overall_metadata(psd, slices)
@@ -66,11 +73,11 @@ class PSDExporter
   private
 
   def export_slice_with_metadata(slice, index, psd)
-    puts "\n导出切片 #{index}:"
-    puts "  名称: #{slice.name || '未命名'}"
-    puts "  ID: #{slice.id}"
-    puts "  位置: (#{slice.left}, #{slice.top})"
-    puts "  尺寸: #{slice.width} x #{slice.height}"
+    # puts "\n导出切片 #{index}:"
+    # puts "  名称: #{slice.name || '未命名'}"
+    # puts "  ID: #{slice.id}"
+    # puts "  位置: (#{slice.left}, #{slice.top})"
+    # puts "  尺寸: #{slice.width} x #{slice.height}"
 
     # 生成基础文件名
     base_filename = generate_base_filename(slice, index)
@@ -87,7 +94,7 @@ class PSDExporter
     begin
       png = slice.to_png
       png.save(image_path, :fast_rgba)
-      puts "  图片已保存: #{image_filename}"
+      # puts "  图片已保存: #{image_filename}"
     rescue => e
       puts "  图片导出失败: #{e.message}"
       return
@@ -97,7 +104,7 @@ class PSDExporter
     begin
       metadata = generate_slice_metadata(slice, index, psd, image_filename)
       File.write(metadata_path, JSON.pretty_generate(metadata))
-      puts "  元数据已保存: #{metadata_filename}"
+      # puts "  元数据已保存: #{metadata_filename}"
     rescue => e
       puts "  元数据导出失败: #{e.message}"
     end

@@ -3,6 +3,7 @@
 require_relative 'psd.rb/lib/psd'
 require 'json'
 require 'digest'
+require_relative 'progress_bar'
 
 class PSDGroupsExporter
   def initialize(psd_file_path, output_base_dir = 'output')
@@ -17,14 +18,14 @@ class PSDGroupsExporter
     puts "正在解析PSD文件: #{@psd_file_path}"
 
     PSD.open(@psd_file_path) do |psd|
-      puts "PSD文件信息:"
-      puts "  宽度: #{psd.header.width}"
-      puts "  高度: #{psd.header.height}"
-      puts "  颜色模式: #{psd.header.mode_name}"
-      puts "  通道数: #{psd.header.channels}"
+      # puts "PSD文件信息:"
+      # puts "  宽度: #{psd.header.width}"
+      # puts "  高度: #{psd.header.height}"
+      # puts "  颜色模式: #{psd.header.mode_name}"
+      # puts "  通道数: #{psd.header.channels}"
 
       # 获取所有文件夹/组
-      groups = psd.tree.descendant_groups
+      groups = psd.tree.descendant_groups.select { |group| group.respond_to?(:children) }
       puts "\n找到 #{groups.size} 个文件夹/组"
 
       if groups.empty?
@@ -37,7 +38,7 @@ class PSDGroupsExporter
       @export_dir = File.join(@output_base_dir, "groups_#{timestamp}")
       Dir.mkdir(@export_dir)
 
-      puts "\n导出目录: #{@export_dir}"
+      # puts "\n导出目录: #{@export_dir}"
 
       # 创建子目录结构
       @images_dir = File.join(@export_dir, 'images')
@@ -45,10 +46,16 @@ class PSDGroupsExporter
       Dir.mkdir(@images_dir)
       Dir.mkdir(@metadata_dir)
 
+      # 创建进度条
+      progress = ProgressBar.new(groups.size, prefix: "导出文件夹/组", width: 40)
+
       # 导出每个文件夹/组
       groups.each_with_index do |group, index|
         export_group_with_text_versions(group, index + 1, psd)
+        progress.increment(1)
       end
+
+      progress.finish("文件夹/组导出完成")
 
       # 导出总体信息
       export_overall_metadata(psd, groups)
@@ -66,11 +73,11 @@ class PSDGroupsExporter
   private
 
   def export_group_with_text_versions(group, index, psd)
-    puts "\n导出文件夹/组 #{index}:"
-    puts "  名称: #{group.name || '未命名'}"
-    puts "  位置: (#{group.left}, #{group.top})"
-    puts "  尺寸: #{group.width} x #{group.height}"
-    puts "  可见性: #{group.visible? ? '可见' : '隐藏'}"
+    # puts "\n导出文件夹/组 #{index}:"
+    # puts "  名称: #{group.name || '未命名'}"
+    # puts "  位置: (#{group.left}, #{group.top})"
+    # puts "  尺寸: #{group.width} x #{group.height}"
+    # puts "  可见性: #{group.visible? ? '可见' : '隐藏'}"
 
     # 生成基础文件名
     base_filename = generate_base_filename(group, index)
@@ -86,11 +93,11 @@ class PSDGroupsExporter
     Dir.mkdir(without_text_dir)
 
     # 导出包含文字图层的版本
-    puts "  导出包含文字图层的版本..."
+    # puts "  导出包含文字图层的版本..."
     export_group_version(group, with_text_dir, base_filename, true, index, psd)
 
     # 导出不包含文字图层的版本
-    puts "  导出不包含文字图层的版本..."
+    # puts "  导出不包含文字图层的版本..."
     export_group_version(group, without_text_dir, base_filename, false, index, psd)
 
     # 生成并导出元数据
@@ -113,7 +120,7 @@ class PSDGroupsExporter
       end
 
       png.save(image_path, :fast_rgba)
-      puts "    图片已保存: #{image_filename}"
+      # puts "    图片已保存: #{image_filename}"
     rescue => e
       puts "    图片导出失败: #{e.message}"
     end
@@ -156,7 +163,7 @@ class PSDGroupsExporter
     begin
       metadata = generate_group_metadata(group, index, psd, base_filename)
       File.write(metadata_path, JSON.pretty_generate(metadata))
-      puts "  元数据已保存: #{metadata_filename}"
+      # puts "  元数据已保存: #{metadata_filename}"
     rescue => e
       puts "  元数据导出失败: #{e.message}"
     end

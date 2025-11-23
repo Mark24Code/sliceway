@@ -3,6 +3,7 @@
 require_relative 'psd.rb/lib/psd'
 require 'json'
 require 'digest'
+require_relative 'progress_bar'
 
 class PSDTextLayersExporter
   def initialize(psd_file_path, output_base_dir = 'output')
@@ -17,15 +18,15 @@ class PSDTextLayersExporter
     puts "正在解析PSD文件: #{@psd_file_path}"
 
     PSD.open(@psd_file_path) do |psd|
-      puts "PSD文件信息:"
-      puts "  宽度: #{psd.header.width}"
-      puts "  高度: #{psd.header.height}"
-      puts "  颜色模式: #{psd.header.mode_name}"
-      puts "  通道数: #{psd.header.channels}"
+      # puts "PSD文件信息:"
+      # puts "  宽度: #{psd.header.width}"
+      # puts "  高度: #{psd.header.height}"
+      # puts "  颜色模式: #{psd.header.mode_name}"
+      # puts "  通道数: #{psd.header.channels}"
 
       # 获取所有文字图层
       text_layers = psd.tree.descendant_layers.select { |layer| !layer.info[:type].nil? }
-      puts "\n找到 #{text_layers.size} 个文字图层"
+      # puts "\n找到 #{text_layers.size} 个文字图层"
 
       if text_layers.empty?
         puts "警告: 该PSD文件中没有找到文字图层"
@@ -37,7 +38,7 @@ class PSDTextLayersExporter
       @export_dir = File.join(@output_base_dir, "text_layers_#{timestamp}")
       Dir.mkdir(@export_dir)
 
-      puts "\n导出目录: #{@export_dir}"
+      # puts "\n导出目录: #{@export_dir}"
 
       # 创建子目录结构
       @images_dir = File.join(@export_dir, 'images')
@@ -45,10 +46,16 @@ class PSDTextLayersExporter
       Dir.mkdir(@images_dir)
       Dir.mkdir(@metadata_dir)
 
+      # 创建进度条
+      progress = ProgressBar.new(text_layers.size, prefix: "导出文字图层", width: 40)
+
       # 导出每个文字图层
       text_layers.each_with_index do |layer, index|
         export_text_layer_with_metadata(layer, index + 1, psd)
+        progress.increment(1)
       end
+
+      progress.finish("文字图层导出完成")
 
       # 导出总体信息
       export_overall_metadata(psd, text_layers)
@@ -66,11 +73,11 @@ class PSDTextLayersExporter
   private
 
   def export_text_layer_with_metadata(layer, index, psd)
-    puts "\n导出文字图层 #{index}:"
-    puts "  名称: #{layer.name || '未命名'}"
-    puts "  位置: (#{layer.left}, #{layer.top})"
-    puts "  尺寸: #{layer.width} x #{layer.height}"
-    puts "  可见性: #{layer.visible? ? '可见' : '隐藏'}"
+    # puts "\n导出文字图层 #{index}:"
+    # puts "  名称: #{layer.name || '未命名'}"
+    # puts "  位置: (#{layer.left}, #{layer.top})"
+    # puts "  尺寸: #{layer.width} x #{layer.height}"
+    # puts "  可见性: #{layer.visible? ? '可见' : '隐藏'}"
 
     # 生成基础文件名
     base_filename = generate_base_filename(layer, index)
@@ -87,7 +94,7 @@ class PSDTextLayersExporter
     begin
       png = layer.to_png
       png.save(image_path, :fast_rgba)
-      puts "  图片已保存: #{image_filename}"
+      # puts "  图片已保存: #{image_filename}"
     rescue => e
       puts "  图片导出失败: #{e.message}"
       return
@@ -97,7 +104,7 @@ class PSDTextLayersExporter
     begin
       metadata = generate_text_layer_metadata(layer, index, psd, image_filename)
       File.write(metadata_path, JSON.pretty_generate(metadata))
-      puts "  元数据已保存: #{metadata_filename}"
+      # puts "  元数据已保存: #{metadata_filename}"
     rescue => e
       puts "  元数据导出失败: #{e.message}"
     end
