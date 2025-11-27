@@ -6,6 +6,7 @@ import { debounce } from 'lodash';
 import { layersAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Layer } from '../../types';
+import { ImagePreviewThumbnail, ImagePreviewModal } from '../ImagePreview';
 
 const FullListView: React.FC = () => {
     const [layers, setLayers] = useAtom(layersAtom);
@@ -17,6 +18,10 @@ const FullListView: React.FC = () => {
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+
+    // 图片预览模态框状态
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const [previewImage, setPreviewImage] = useState<string>('');
 
     const handleExport = useCallback(async (ids: number[]) => {
         if (!project) return;
@@ -45,6 +50,7 @@ const FullListView: React.FC = () => {
             setRefreshing(false);
         }
     }, [project, setLayers]);
+
 
     // 防抖导出函数
     const debouncedExport = useCallback(
@@ -97,11 +103,23 @@ const FullListView: React.FC = () => {
 
     const columns = [
         {
+            title: 'ID',
+            dataIndex: 'id',
+            key: 'id',
+        },
+        {
             title: '预览',
             key: 'preview',
             render: (_: any, record: Layer) => (
                 record.image_path ?
-                    <img src={`http://localhost:4567/${record.image_path}`} alt={record.name} style={{ maxHeight: 40, maxWidth: 40 }} /> :
+                    <ImagePreviewThumbnail
+                        src={`http://localhost:4567/${record.image_path}`}
+                        alt={record.name}
+                        onClick={() => {
+                            setPreviewImage(`http://localhost:4567/${record.image_path}`);
+                            setPreviewVisible(true);
+                        }}
+                    /> :
                     <span>无图片</span>
             ),
         },
@@ -202,6 +220,13 @@ const FullListView: React.FC = () => {
                 columns={columns}
                 rowKey="id"
                 pagination={{ pageSize: 20 }}
+            />
+
+            {/* 图片预览模态框 */}
+            <ImagePreviewModal
+                visible={previewVisible}
+                imageUrl={previewImage}
+                onClose={() => setPreviewVisible(false)}
             />
         </div>
     );
