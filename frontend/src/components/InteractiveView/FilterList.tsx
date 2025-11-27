@@ -166,6 +166,9 @@ const FilterList: React.FC = () => {
                             <Select.Option value="vertical">纵向</Select.Option>
                         </Select>
                     </div>
+                    <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
+                        导出 ({selectedLayerIds.length})
+                    </Button>
                 </Space>
                 <Tabs activeKey={activeTab} onChange={setActiveTab} style={{ marginBottom: 0 }}>
                     <TabPane tab="全部" key="all" />
@@ -174,9 +177,6 @@ const FilterList: React.FC = () => {
                     <TabPane tab="无文本" key="no_text" />
                     <TabPane tab="有文本" key="has_text" />
                 </Tabs>
-                <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
-                    导出 ({selectedLayerIds.length})
-                </Button>
             </div>
 
             <div className="list-content">
