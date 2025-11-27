@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Tabs, Card, Checkbox, Button, message, Select, Space } from 'antd';
 import { useAtom } from 'jotai';
 import { debounce } from 'lodash';
-import { layersAtom, scannerPositionAtom, hoverLayerIdAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
+import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import { IMAGE_BASE_URL } from '../../config';
 
@@ -12,7 +12,6 @@ const FilterList: React.FC = () => {
     const [layers] = useAtom(layersAtom);
     const [scannerY] = useAtom(scannerPositionAtom);
     const [project] = useAtom(projectAtom);
-    const [, setHoverLayerId] = useAtom(hoverLayerIdAtom);
     const [selectedLayerIds, setSelectedLayerIds] = useAtom(selectedLayerIdsAtom);
     const [, setGlobalLoading] = useAtom(globalLoadingAtom);
     const [activeTab, setActiveTab] = useState('all');
@@ -185,8 +184,6 @@ const FilterList: React.FC = () => {
                             <div
                                 className="cover"
                                 onClick={() => toggleSelection(layer.id)}
-                                onMouseEnter={() => setHoverLayerId(layer.id)}
-                                onMouseLeave={() => setHoverLayerId(null)}
                             >
                                 {layer.image_path ? (
                                     <img

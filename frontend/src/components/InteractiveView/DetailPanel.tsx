@@ -1,17 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Descriptions, Typography, Divider } from 'antd';
 import { useAtom } from 'jotai';
 import { layersAtom, selectedLayerIdsAtom } from '../../store/atoms';
+import { ImagePreviewModal } from '../ImagePreview/ImagePreviewModal';
+import { IMAGE_BASE_URL } from '../../config';
 
 const { Title, Paragraph, Text } = Typography;
 
 const DetailPanel: React.FC = () => {
     const [layers] = useAtom(layersAtom);
     const [selectedLayerIds] = useAtom(selectedLayerIdsAtom);
+    const [previewVisible, setPreviewVisible] = useState(false);
 
     // Show details for the last selected layer
     const selectedId = selectedLayerIds[selectedLayerIds.length - 1];
     const layer = layers.find(l => l.id === selectedId);
+
+    // 缩略图点击处理
+    const handleThumbnailClick = () => {
+        setPreviewVisible(true);
+    };
+
+    // 模态框关闭处理
+    const handlePreviewClose = () => {
+        setPreviewVisible(false);
+    };
+
+    // 构建图片URL
+    const imageUrl = layer?.image_path ? `${IMAGE_BASE_URL}/${layer.image_path}` : '';
 
     if (!layer) {
         return <div style={{ padding: 24, color: '#999' }}>选择一个图层查看详情</div>;
@@ -31,6 +47,41 @@ background-size: cover;`;
 
     return (
         <div style={{ padding: 24 }}>
+            {/* 缩略图区域 */}
+            {layer.image_path && (
+                <div style={{ marginBottom: 16, textAlign: 'center' }}>
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: 200,
+                            height: 120,
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 6,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            margin: '0 auto'
+                        }}
+                        onClick={handleThumbnailClick}
+                    >
+                        <img
+                            src={imageUrl}
+                            alt={layer.name}
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain'
+                            }}
+                        />
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                        点击查看大图
+                    </div>
+                </div>
+            )}
+
             <Title level={4}>图层详情</Title>
             <Descriptions column={1} bordered size="small">
                 <Descriptions.Item label="ID">{layer.id}</Descriptions.Item>
@@ -49,6 +100,21 @@ background-size: cover;`;
                 </pre>
                 <Text copyable={{ text: cssCode }}>复制代码</Text>
             </Paragraph>
+
+            {/* 图片预览模态框 */}
+            <ImagePreviewModal
+                visible={previewVisible}
+                imageUrl={imageUrl}
+                alt={layer.name}
+                onClose={handlePreviewClose}
+                layerInfo={{
+                    id: layer.id,
+                    name: layer.name,
+                    layer_type: layer.layer_type,
+                    width: layer.width,
+                    height: layer.height
+                }}
+            />
         </div>
     );
 };

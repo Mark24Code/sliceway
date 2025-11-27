@@ -1,13 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
-import { projectAtom, scannerPositionAtom, hoverLayerIdAtom, layersAtom, previewZoomAtom } from '../../store/atoms';
+import { projectAtom, scannerPositionAtom, previewZoomAtom } from '../../store/atoms';
 import { IMAGE_BASE_URL } from '../../config';
 
 const ScannerPreview: React.FC = () => {
     const [project] = useAtom(projectAtom);
-    const [layers] = useAtom(layersAtom);
     const [, setScannerPosition] = useAtom(scannerPositionAtom);
-    const [hoverLayerId] = useAtom(hoverLayerIdAtom);
     const zoom = useAtomValue(previewZoomAtom);
     const [scannerWidth, setScannerWidth] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -44,8 +42,6 @@ const ScannerPreview: React.FC = () => {
         }
     }, []);
 
-    const hoverLayer = layers.find(l => l.id === hoverLayerId);
-
     if (!project) return null;
 
     return (
@@ -68,18 +64,6 @@ const ScannerPreview: React.FC = () => {
                         height: 'auto'
                     }}
                 />
-                {/* Highlight Box */}
-                {hoverLayer && (
-                    <div
-                        className="highlight-box"
-                        style={{
-                            left: hoverLayer.x * zoom,
-                            top: hoverLayer.y * zoom - (containerRef.current?.scrollTop || 0),
-                            width: hoverLayer.width * zoom,
-                            height: hoverLayer.height * zoom,
-                        }}
-                    />
-                )}
             </div>
             <div
                 className="scanner-line"
