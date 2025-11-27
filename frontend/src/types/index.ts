@@ -28,3 +28,11 @@ export interface ProjectListResponse {
   projects: Project[];
   total: number;
 }
+
+// 图层类型映射配置
+export const LAYER_TYPE_MAP: Record<string, string> = {
+  'slice': '切片',
+  'layer': '图层',
+  'group': '组',
+  'text': '文本'
+};

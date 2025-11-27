@@ -6,13 +6,22 @@ interface ImagePreviewModalProps {
   imageUrl: string;
   alt?: string;
   onClose: () => void;
+  // 新增图片信息
+  layerInfo?: {
+    id: number;
+    name: string;
+    layer_type: string;
+    width: number;
+    height: number;
+  };
 }
 
 export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   visible,
   imageUrl,
   alt = '预览图片',
-  onClose
+  onClose,
+  layerInfo
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -117,6 +126,27 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
         />
+        {layerInfo && !isFullscreen && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '12px 16px',
+              background: 'white',
+              borderRadius: '6px',
+              border: '1px solid #e8e8e8',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              textAlign: 'left'
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              <div><strong>ID:</strong> {layerInfo.id}</div>
+              <div><strong>名称:</strong> {layerInfo.name}</div>
+              <div><strong>类型:</strong> {layerInfo.layer_type}</div>
+              <div><strong>尺寸:</strong> {layerInfo.width}×{layerInfo.height}</div>
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

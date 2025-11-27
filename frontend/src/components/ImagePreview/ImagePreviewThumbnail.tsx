@@ -6,6 +6,9 @@ interface ImagePreviewThumbnailProps {
   width?: number;
   height?: number;
   onClick?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onMouseMove?: (e: React.MouseEvent) => void;
 }
 
 export const ImagePreviewThumbnail: React.FC<ImagePreviewThumbnailProps> = ({
@@ -13,7 +16,10 @@ export const ImagePreviewThumbnail: React.FC<ImagePreviewThumbnailProps> = ({
   alt,
   width = 40,
   height = 40,
-  onClick
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+  onMouseMove
 }) => {
   return (
     <img
@@ -25,6 +31,9 @@ export const ImagePreviewThumbnail: React.FC<ImagePreviewThumbnailProps> = ({
         cursor: onClick ? 'pointer' : 'default'
       }}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onMouseMove={onMouseMove}
     />
   );
 };

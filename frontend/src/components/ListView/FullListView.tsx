@@ -6,7 +6,8 @@ import { debounce } from 'lodash';
 import { layersAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Layer } from '../../types';
-import { ImagePreviewThumbnail, ImagePreviewModal } from '../ImagePreview';
+import { LAYER_TYPE_MAP } from '../../types';
+import { ImagePreviewThumbnail, ImagePreviewModal, ImagePreviewHover } from '../ImagePreview';
 import { IMAGE_BASE_URL } from '../../config';
 
 const FullListView: React.FC = () => {
@@ -23,6 +24,7 @@ const FullListView: React.FC = () => {
     // 图片预览模态框状态
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewImage, setPreviewImage] = useState<string>('');
+    const [previewLayerInfo, setPreviewLayerInfo] = useState<any>(null);
 
     const handleExport = useCallback(async (ids: number[]) => {
         if (!project) return;
@@ -113,14 +115,35 @@ const FullListView: React.FC = () => {
             key: 'preview',
             render: (_: any, record: Layer) => (
                 record.image_path ?
-                    <ImagePreviewThumbnail
+                    <ImagePreviewHover
                         src={`${IMAGE_BASE_URL}/${record.image_path}`}
                         alt={record.name}
-                        onClick={() => {
-                            setPreviewImage(`${IMAGE_BASE_URL}/${record.image_path}`);
-                            setPreviewVisible(true);
+                        maxWidth={500}
+                        maxHeight={400}
+                        layerInfo={{
+                            id: record.id,
+                            name: record.name,
+                            layer_type: record.layer_type,
+                            width: record.width,
+                            height: record.height
                         }}
-                    /> :
+                    >
+                        <ImagePreviewThumbnail
+                            src={`${IMAGE_BASE_URL}/${record.image_path}`}
+                            alt={record.name}
+                            onClick={() => {
+                                setPreviewImage(`${IMAGE_BASE_URL}/${record.image_path}`);
+                                setPreviewLayerInfo({
+                                    id: record.id,
+                                    name: record.name,
+                                    layer_type: record.layer_type,
+                                    width: record.width,
+                                    height: record.height
+                                });
+                                setPreviewVisible(true);
+                            }}
+                        />
+                    </ImagePreviewHover> :
                     <span>无图片</span>
             ),
         },
@@ -133,6 +156,7 @@ const FullListView: React.FC = () => {
             title: '类型',
             dataIndex: 'layer_type',
             key: 'layer_type',
+            render: (_: any, record: Layer) => LAYER_TYPE_MAP[record.layer_type] || record.layer_type,
         },
         {
             title: '尺寸',
@@ -227,7 +251,11 @@ const FullListView: React.FC = () => {
             <ImagePreviewModal
                 visible={previewVisible}
                 imageUrl={previewImage}
-                onClose={() => setPreviewVisible(false)}
+                onClose={() => {
+                    setPreviewVisible(false);
+                    setPreviewLayerInfo(null);
+                }}
+                layerInfo={previewLayerInfo}
             />
         </div>
     );
