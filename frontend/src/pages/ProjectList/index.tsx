@@ -339,7 +339,21 @@ const ProjectList: React.FC = () => {
             key: 'action',
             render: (_: any, record: Project) => (
                 <Space>
-                    {record.status === 'processing' ? (
+                    <Button
+                        type="default"
+                        className="project-list__action-button--view"
+                        onClick={() => handleViewDetail(record)}
+                    >
+                        摘要
+                    </Button>
+                    <Button
+                        type="primary"
+                        className="project-list__action-button--view"
+                        onClick={() => navigate(`/projects/${record.id}`)}
+                    >
+                        进入
+                    </Button>
+                {record.status === 'processing' ? (
                         <Button
                             type="primary"
                             danger
@@ -358,13 +372,6 @@ const ProjectList: React.FC = () => {
                             开始处理
                         </Button>
                     )}
-                    <Button
-                        type="default"
-                        className="project-list__action-button--view"
-                        onClick={() => handleViewDetail(record)}
-                    >
-                        查看
-                    </Button>
                     <Button
                         danger
                         className="project-list__action-button--delete"
