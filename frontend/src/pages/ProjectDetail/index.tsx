@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Spin, message } from 'antd';
+import { Layout, Menu, Spin, message, Tag } from 'antd';
 import { useParams } from 'react-router-dom';
 import { useAtom } from 'jotai';
 import { AppstoreOutlined, ScanOutlined } from '@ant-design/icons';
@@ -34,6 +34,19 @@ const ProjectDetail: React.FC = () => {
             }
         };
         fetchData();
+
+        // Polling for project status
+        const intervalId = setInterval(async () => {
+            if (!id) return;
+            try {
+                const pRes = await client.get(`/projects/${id}`);
+                setProject(pRes.data);
+            } catch (error) {
+                console.error('Failed to poll project status', error);
+            }
+        }, 5000);
+
+        return () => clearInterval(intervalId);
     }, [id, setProject, setLayers]);
 
     if (loading) {
@@ -52,12 +65,36 @@ const ProjectDetail: React.FC = () => {
         );
     }
 
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'ready': return 'success';
+            case 'processing': return 'processing';
+            case 'error': return 'error';
+            default: return 'default';
+        }
+    };
+
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case 'ready': return '已就绪';
+            case 'processing': return '处理中';
+            case 'error': return '错误';
+            case 'pending': return '等待中';
+            default: return status;
+        }
+    };
+
     return (
         <div className="project-detail">
             <Layout className="project-detail__layout">
                 <Sider theme="light" width={200}>
                     <div className="project-detail__layout-title">
                         <h3>项目：{project.name}</h3>
+                        <div style={{ marginTop: 8 }}>
+                            <Tag color={getStatusColor(project.status)}>
+                                {getStatusText(project.status)}
+                            </Tag>
+                        </div>
                     </div>
                     <Menu
                         mode="inline"
