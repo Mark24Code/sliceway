@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import { useAtom } from 'jotai';
-import { projectAtom, scannerPositionAtom, hoverLayerIdAtom, layersAtom } from '../../store/atoms';
+import { useAtom, useAtomValue } from 'jotai';
+import { projectAtom, scannerPositionAtom, hoverLayerIdAtom, layersAtom, previewZoomAtom } from '../../store/atoms';
 import { IMAGE_BASE_URL } from '../../config';
 
 const ScannerPreview: React.FC = () => {
@@ -8,6 +8,7 @@ const ScannerPreview: React.FC = () => {
     const [layers] = useAtom(layersAtom);
     const [, setScannerPosition] = useAtom(scannerPositionAtom);
     const [hoverLayerId] = useAtom(hoverLayerIdAtom);
+    const zoom = useAtomValue(previewZoomAtom);
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
 
@@ -32,7 +33,14 @@ const ScannerPreview: React.FC = () => {
                     ref={imgRef}
                     src={`${IMAGE_BASE_URL}/processed/${project.id}/full_preview.png`}
                     alt="完整预览"
-                    style={{ display: 'block', maxWidth: '100%' }}
+                    style={{
+                        display: 'block',
+                        maxWidth: '100%',
+                        transform: `scale(${zoom})`,
+                        transformOrigin: 'top left',
+                        width: `${100 / zoom}%`,
+                        height: 'auto'
+                    }}
                 />
 
                 {/* Highlight Box */}
@@ -40,10 +48,10 @@ const ScannerPreview: React.FC = () => {
                     <div
                         className="highlight-box"
                         style={{
-                            left: hoverLayer.x,
-                            top: hoverLayer.y,
-                            width: hoverLayer.width,
-                            height: hoverLayer.height,
+                            left: hoverLayer.x * zoom,
+                            top: hoverLayer.y * zoom,
+                            width: hoverLayer.width * zoom,
+                            height: hoverLayer.height * zoom,
                         }}
                     />
                 )}

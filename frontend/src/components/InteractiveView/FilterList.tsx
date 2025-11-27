@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Tabs, Card, Checkbox, Button, message, Select, Space } from 'antd';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { debounce } from 'lodash';
-import { layersAtom, scannerPositionAtom, hoverLayerIdAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
+import { layersAtom, scannerPositionAtom, hoverLayerIdAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, previewZoomAtom } from '../../store/atoms';
 import client from '../../api/client';
 import { IMAGE_BASE_URL } from '../../config';
 
@@ -15,6 +15,7 @@ const FilterList: React.FC = () => {
     const [, setHoverLayerId] = useAtom(hoverLayerIdAtom);
     const [selectedLayerIds, setSelectedLayerIds] = useAtom(selectedLayerIdsAtom);
     const [, setGlobalLoading] = useAtom(globalLoadingAtom);
+    const zoom = useAtomValue(previewZoomAtom);
     const [activeTab, setActiveTab] = useState('all');
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
@@ -24,11 +25,12 @@ const FilterList: React.FC = () => {
     // The scanner is roughly at the center of the viewport.
     // We need to know the viewport height to calculate the exact "scan line" Y in the image.
     // For now, let's assume the scanner line is at `scannerY + viewportHeight / 2`.
-    // Since we don't have exact viewport height here easily without ResizeObserver, 
+    // Since we don't have exact viewport height here easily without ResizeObserver,
     // let's just use a range around `scannerY`.
     // Actually, `scannerY` is `scrollTop`. The line is at `scrollTop + containerHeight/2`.
     // Let's approximate containerHeight as 600px (2/3 of screen). So offset ~300px.
-    const scanLineY = scannerY + 300;
+    // Adjust for current zoom level
+    const scanLineY = (scannerY + 300) / zoom;
     // const range = 100; // Show items within +/- 100px of the line?
     // Requirement: "Filter exported images where reference line passes through".
 

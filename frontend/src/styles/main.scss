@@ -21,10 +21,12 @@ body {
   }
   
   .scanner-section {
-    flex: 1 1 0;
+    flex: 1 1 0; // Give more space to scanner section
     overflow: hidden;
     border-bottom: 1px solid #ddd;
     position: relative;
+    display: flex;
+    flex-direction: column;
   }
   
   .filter-section {

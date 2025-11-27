@@ -3,6 +3,7 @@ import { Layout } from 'antd';
 import ScannerPreview from './ScannerPreview';
 import FilterList from './FilterList';
 import DetailPanel from './DetailPanel';
+import PreviewControls from './PreviewControls';
 
 const { Content, Sider } = Layout;
 
@@ -13,6 +14,7 @@ const InteractiveView: React.FC = () => {
                 <Content style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div className="scanner-section">
                         <ScannerPreview />
+                        <PreviewControls />
                     </div>
                     <div className="filter-section">
                         <FilterList />

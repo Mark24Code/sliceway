@@ -1,0 +1,10 @@
+  .preview-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 200; // Higher than scanner line
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 4px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
