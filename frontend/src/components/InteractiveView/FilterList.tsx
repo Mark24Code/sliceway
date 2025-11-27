@@ -4,6 +4,7 @@ import { useAtom } from 'jotai';
 import { debounce } from 'lodash';
 import { layersAtom, scannerPositionAtom, hoverLayerIdAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
+import { IMAGE_BASE_URL } from '../../config';
 
 const { TabPane } = Tabs;
 
@@ -197,7 +198,7 @@ const FilterList: React.FC = () => {
                                 {layer.image_path ? (
                                     <img
                                         alt={layer.name}
-                                        src={`http://localhost:4567/${layer.image_path}`}
+                                        src={`${IMAGE_BASE_URL}/${layer.image_path}`}
                                     />
                                 ) : (
                                     <span>无图片</span>

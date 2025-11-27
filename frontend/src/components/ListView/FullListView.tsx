@@ -7,6 +7,7 @@ import { layersAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Layer } from '../../types';
 import { ImagePreviewThumbnail, ImagePreviewModal } from '../ImagePreview';
+import { IMAGE_BASE_URL } from '../../config';
 
 const FullListView: React.FC = () => {
     const [layers, setLayers] = useAtom(layersAtom);
@@ -113,10 +114,10 @@ const FullListView: React.FC = () => {
             render: (_: any, record: Layer) => (
                 record.image_path ?
                     <ImagePreviewThumbnail
-                        src={`http://localhost:4567/${record.image_path}`}
+                        src={`${IMAGE_BASE_URL}/${record.image_path}`}
                         alt={record.name}
                         onClick={() => {
-                            setPreviewImage(`http://localhost:4567/${record.image_path}`);
+                            setPreviewImage(`${IMAGE_BASE_URL}/${record.image_path}`);
                             setPreviewVisible(true);
                         }}
                     /> :

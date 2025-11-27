@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useAtom } from 'jotai';
 import { projectAtom, scannerPositionAtom, hoverLayerIdAtom, layersAtom } from '../../store/atoms';
+import { IMAGE_BASE_URL } from '../../config';
 
 const ScannerPreview: React.FC = () => {
     const [project] = useAtom(projectAtom);
@@ -29,7 +30,7 @@ const ScannerPreview: React.FC = () => {
             <div style={{ position: 'relative' }}>
                 <img
                     ref={imgRef}
-                    src={`http://localhost:4567/processed/${project.id}/full_preview.png`}
+                    src={`${IMAGE_BASE_URL}/processed/${project.id}/full_preview.png`}
                     alt="完整预览"
                     style={{ display: 'block', maxWidth: '100%' }}
                 />
