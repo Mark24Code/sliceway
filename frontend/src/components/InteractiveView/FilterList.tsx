@@ -121,7 +121,7 @@ const FilterList: React.FC = () => {
             <div className="header">
                 <Space wrap style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <span style={{ marginRight: 8 }}>类型:</span>
+                        {/* <span style={{ marginRight: 8 }}>类型:</span> */}
                         <Select
                             mode="multiple"
                             placeholder="选择图层类型"
@@ -137,7 +137,7 @@ const FilterList: React.FC = () => {
                         </Select>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <span style={{ marginRight: 8 }}>尺寸:</span>
+                        {/* <span style={{ marginRight: 8 }}>尺寸:</span> */}
                         <Select
                             mode="multiple"
                             placeholder="选择尺寸范围"
@@ -152,7 +152,7 @@ const FilterList: React.FC = () => {
                         </Select>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <span style={{ marginRight: 8 }}>比例:</span>
+                        {/* <span style={{ marginRight: 8 }}>比例:</span> */}
                         <Select
                             mode="multiple"
                             placeholder="选择比例类型"
