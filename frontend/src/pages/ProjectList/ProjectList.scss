@@ -1,0 +1,146 @@
+// ProjectList 页面样式
+.project-list {
+  padding: 24px;
+
+  &__header {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: #262626;
+    }
+
+    &-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  &__table {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    .ant-table-thead > tr > th {
+      background: #fafafa;
+      font-weight: 600;
+      color: #262626;
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background: #f5f5f5;
+    }
+  }
+
+  &__modal {
+    .ant-modal-body {
+      padding: 24px;
+    }
+
+    .ant-form-item-label > label {
+      font-weight: 500;
+      color: #262626;
+    }
+
+    .ant-upload-drag {
+      border: 2px dashed #d9d9d9;
+      border-radius: 8px;
+      background: #fafafa;
+      transition: all 0.3s;
+
+      &:hover {
+        border-color: #1890ff;
+        background: #f0f8ff;
+      }
+
+      .ant-upload-drag-icon {
+        margin-bottom: 8px;
+
+        .anticon {
+          font-size: 48px;
+          color: #1890ff;
+        }
+      }
+
+      .ant-upload-text {
+        font-size: 16px;
+        color: #262626;
+        margin-bottom: 8px;
+      }
+
+      .ant-upload-hint {
+        color: #8c8c8c;
+        font-size: 14px;
+      }
+    }
+  }
+
+  &__status-tag {
+    &--ready {
+      background: #f6ffed;
+      border-color: #b7eb8f;
+      color: #52c41a;
+    }
+
+    &--processing {
+      background: #e6f7ff;
+      border-color: #91d5ff;
+      color: #1890ff;
+    }
+
+    &--error {
+      background: #fff2f0;
+      border-color: #ffccc7;
+      color: #ff4d4f;
+    }
+
+    &--pending {
+      background: #fafafa;
+      border-color: #d9d9d9;
+      color: #8c8c8c;
+    }
+  }
+
+  &__action-button {
+    &--delete {
+      &:hover {
+        background: #ff4d4f;
+        border-color: #ff4d4f;
+        color: #fff;
+      }
+    }
+  }
+
+  &__project-link {
+    color: #1890ff;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover {
+      color: #40a9ff;
+      text-decoration: underline;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .project-list {
+    padding: 16px;
+
+    &__header {
+      flex-direction: column;
+      gap: 16px;
+      align-items: stretch;
+
+      &-actions {
+        justify-content: flex-end;
+      }
+    }
+  }
+}

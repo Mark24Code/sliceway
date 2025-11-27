@@ -1,0 +1,14 @@
+require 'json'
+
+class Project < ActiveRecord::Base
+  has_many :layers, dependent: :destroy
+end
+
+class Layer < ActiveRecord::Base
+  belongs_to :project
+  # metadata is stored as JSON string in sqlite, so we might need to parse it manually or use a serializer if AR version supports it.
+  # For simplicity in older AR or sqlite, we can just define getter/setter or use serialize.
+  serialize :metadata, coder: JSON
+  
+  self.inheritance_column = :_type_disabled
+end
