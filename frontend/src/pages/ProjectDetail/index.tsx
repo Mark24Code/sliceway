@@ -35,18 +35,27 @@ const ProjectDetail: React.FC = () => {
         };
         fetchData();
 
-        // Polling for project status
-        const intervalId = setInterval(async () => {
-            if (!id) return;
-            try {
-                const pRes = await client.get(`/projects/${id}`);
-                setProject(pRes.data);
-            } catch (error) {
-                console.error('Failed to poll project status', error);
-            }
-        }, 5000);
+        // WebSocket connection
+        const ws = new WebSocket('ws://localhost:4567/ws');
 
-        return () => clearInterval(intervalId);
+        ws.onopen = () => {
+            console.log('Connected to WebSocket');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'status_update' && String(data.project_id) === id) {
+                    setProject(prev => prev ? { ...prev, status: data.status } : null);
+                }
+            } catch (e) {
+                console.error('Failed to parse WebSocket message', e);
+            }
+        };
+
+        return () => {
+            ws.close();
+        };
     }, [id, setProject, setLayers]);
 
     if (loading) {
