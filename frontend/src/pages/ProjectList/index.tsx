@@ -43,6 +43,37 @@ const ProjectList: React.FC = () => {
 
     useEffect(() => {
         fetchProjects();
+
+        // WebSocket connection
+        const ws = new WebSocket('ws://localhost:4567/ws');
+
+        ws.onopen = () => {
+            console.log('Connected to WebSocket');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'status_update') {
+                    const projectId = Number(data.project_id);
+                    setProjects(prevProjects =>
+                        prevProjects.map(p =>
+                            p.id === projectId ? { ...p, status: data.status } : p
+                        )
+                    );
+                }
+            } catch (e) {
+                console.error('Failed to parse WebSocket message', e);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Disconnected from WebSocket');
+        };
+
+        return () => {
+            ws.close();
+        };
     }, []);
 
     const handleCreate = useCallback(async (values: any) => {
@@ -464,8 +495,8 @@ const ProjectList: React.FC = () => {
                         <Descriptions.Item label="项目状态">
                             <Tag
                                 color={currentProject.status === 'ready' ? 'success' :
-                                       currentProject.status === 'processing' ? 'processing' :
-                                       currentProject.status === 'error' ? 'error' : 'default'}
+                                    currentProject.status === 'processing' ? 'processing' :
+                                        currentProject.status === 'error' ? 'error' : 'default'}
                                 className={getStatusTagClass(currentProject.status)}
                             >
                                 {getStatusText(currentProject.status)}

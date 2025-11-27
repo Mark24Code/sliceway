@@ -1,6 +1,21 @@
 #!/usr/bin/env ruby
 require_relative '../lib/database'
 require_relative '../lib/psd_processor'
+require 'net/http'
+require 'json'
+require 'uri'
+
+def notify_status(project_id, status)
+  uri = URI('http://localhost:4567/internal/notify')
+  http = Net::HTTP.new(uri.host, uri.port)
+  request = Net::HTTP::Post.new(uri.path, 'Content-Type' => 'application/json')
+  request.body = { project_id: project_id, status: status }.to_json
+  begin
+    http.request(request)
+  rescue => e
+    puts "Failed to notify status: #{e.message}"
+  end
+end
 
 if ARGV.empty?
   puts "Usage: bin/process_psd <project_id>"
@@ -11,9 +26,12 @@ project_id = ARGV[0]
 
 begin
   puts "Starting processing for project #{project_id}..."
+  notify_status(project_id, 'processing')
   PsdProcessor.new(project_id).call
+  notify_status(project_id, 'ready')
   puts "Processing complete for project #{project_id}."
 rescue => e
+  notify_status(project_id, 'error')
   puts "Fatal error in process_psd: #{e.message}"
   puts e.backtrace
   exit 1

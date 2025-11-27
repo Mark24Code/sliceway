@@ -5,6 +5,8 @@ require 'fileutils'
 require_relative 'lib/database'
 require_relative 'lib/models'
 require_relative 'lib/psd_processor'
+require 'faye/websocket'
+require 'json'
 
 set :public_folder, 'public'
 set :bind, '0.0.0.0'
@@ -138,6 +140,40 @@ end
 
 # 全局变量来跟踪正在运行的任务
 $running_tasks = {}
+
+# WebSocket clients
+$ws_clients = []
+
+# WebSocket endpoint
+get '/ws' do
+  if Faye::WebSocket.websocket?(request.env)
+    ws = Faye::WebSocket.new(request.env)
+
+    ws.on :open do |event|
+      $ws_clients << ws
+    end
+
+    ws.on :close do |event|
+      $ws_clients.delete(ws)
+      ws = nil
+    end
+
+    return ws.rack_response
+  end
+end
+
+# Internal endpoint for status updates
+post '/internal/notify' do
+  data = JSON.parse(request.body.read)
+  project_id = data['project_id']
+  status = data['status']
+  
+  # Broadcast to all connected clients
+  message = { type: 'status_update', project_id: project_id, status: status }.to_json
+  $ws_clients.each { |ws| ws.send(message) }
+  
+  json success: true
+end
 
 delete '/api/projects/:id' do
   project = Project.find(params[:id])
