@@ -100,34 +100,25 @@ post '/api/projects/:id/process' do
   json success: true
 end
 
-# 全局变量来跟踪正在运行的任务
-$running_tasks = {}
-
-delete '/api/projects/:id' do
+# 停止处理项目
+post '/api/projects/:id/stop' do
   project = Project.find(params[:id])
 
-  # 如果项目正在处理中，中止任务
-  if project.status == 'processing'
-    # 中止对应的处理任务
-    if $running_tasks[project.id]
-      Thread.kill($running_tasks[project.id])
-      $running_tasks.delete(project.id)
-      puts "中止了项目 #{project.id} 的处理任务"
-    end
+  # 只有正在处理中的项目才能停止
+  if project.status != 'processing'
+    status 400
+    return json error: "项目状态为 #{project.status}，无法停止处理"
   end
 
-  # Clean up files
+  # 中止对应的处理任务
+  if $running_tasks[project.id]
+    Thread.kill($running_tasks[project.id])
+    $running_tasks.delete(project.id)
+    puts "中止了项目 #{project.id} 的处理任务"
+  end
+
+  # 清理已生成的文件
   begin
-    # Clean up uploaded PSD file
-    if project.psd_path && File.exist?(project.psd_path)
-      FileUtils.rm_rf(project.psd_path)
-    end
-
-    # Clean up export directory
-    if project.export_path && Dir.exist?(project.export_path)
-      FileUtils.rm_rf(project.export_path)
-    end
-
     # Clean up exported images in public directory
     project.layers.each do |layer|
       if layer.image_path && File.exist?(File.join('public', layer.image_path))
@@ -140,11 +131,87 @@ delete '/api/projects/:id' do
     if Dir.exist?(processed_dir)
       FileUtils.rm_rf(processed_dir)
     end
+
+    # 重置项目状态为初始状态
+    project.update(status: 'pending')
+
+    # 删除已生成的图层记录
+    project.layers.destroy_all
+
+  rescue => e
+    puts "Warning: Failed to clean up some files: #{e.message}"
+    status 500
+    return json error: "停止处理时清理文件失败: #{e.message}"
+  end
+
+  json success: true
+end
+
+# 全局变量来跟踪正在运行的任务
+$running_tasks = {}
+
+delete '/api/projects/:id' do
+  project = Project.find(params[:id])
+
+  # 根据项目状态执行不同的清理逻辑
+  case project.status
+  when 'processing'
+    # 如果项目正在处理中，先中止后台任务
+    puts "项目 #{project.id} 正在处理中，先中止处理任务..."
+    if $running_tasks[project.id]
+      Thread.kill($running_tasks[project.id])
+      $running_tasks.delete(project.id)
+      puts "已中止项目 #{project.id} 的处理任务"
+    end
+
+  when 'ready'
+    # 如果项目已完成，清理所有生成的文件
+    puts "项目 #{project.id} 已完成，清理生成的文件..."
+
+  when 'pending', 'error'
+    # 如果项目待处理或出错，清理基础文件
+    puts "项目 #{project.id} 状态为 #{project.status}，清理相关文件..."
+  end
+
+  # 清理所有相关文件
+  begin
+    # Clean up uploaded PSD file
+    if project.psd_path && File.exist?(project.psd_path)
+      FileUtils.rm_rf(project.psd_path)
+      puts "已清理PSD文件: #{project.psd_path}"
+    end
+
+    # Clean up export directory
+    if project.export_path && Dir.exist?(project.export_path)
+      FileUtils.rm_rf(project.export_path)
+      puts "已清理导出目录: #{project.export_path}"
+    end
+
+    # Clean up exported images in public directory
+    project.layers.each do |layer|
+      if layer.image_path && File.exist?(File.join('public', layer.image_path))
+        FileUtils.rm_rf(File.join('public', layer.image_path))
+        puts "已清理图层图片: #{layer.image_path}"
+      end
+    end
+
+    # Clean up processed images directory
+    processed_dir = File.join('public', 'processed', project.id.to_s)
+    if Dir.exist?(processed_dir)
+      FileUtils.rm_rf(processed_dir)
+      puts "已清理处理图片目录: #{processed_dir}"
+    end
+
+    puts "项目 #{project.id} 文件清理完成"
+
   rescue => e
     puts "Warning: Failed to clean up some files: #{e.message}"
   end
 
+  # 删除项目记录
   project.destroy
+  puts "项目 #{project.id} 记录已删除"
+
   json success: true
 end
 

@@ -80,34 +80,17 @@
     }
   }
 
-  &__status-tag {
-    &--ready {
-      background: #f6ffed;
-      border-color: #b7eb8f;
-      color: #52c41a;
-    }
-
-    &--processing {
-      background: #e6f7ff;
-      border-color: #91d5ff;
-      color: #1890ff;
-    }
-
-    &--error {
-      background: #fff2f0;
-      border-color: #ffccc7;
-      color: #ff4d4f;
-    }
-
-    &--pending {
-      background: #fafafa;
-      border-color: #d9d9d9;
-      color: #8c8c8c;
-    }
-  }
 
   &__action-button {
     &--delete {
+      &:hover {
+        background: #ff4d4f;
+        border-color: #ff4d4f;
+        color: #fff;
+      }
+    }
+
+    &--stop {
       &:hover {
         background: #ff4d4f;
         border-color: #ff4d4f;
@@ -125,6 +108,39 @@
       color: #40a9ff;
       text-decoration: underline;
     }
+  }
+
+  &__status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__status-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+
+    &--pending {
+      background-color: #8c8c8c; // 灰色 - 初始状态
+    }
+
+    &--processing {
+      background-color: #fc9403; // 黄色 - 处理中
+    }
+
+    &--ready {
+      background-color: #52c41a; // 绿色 - 处理完成
+    }
+
+    &--error {
+      background-color: #ff4d4f; // 红色 - 处理失败
+    }
+  }
+
+  &__status-text {
+    font-size: 14px;
+    color: #262626;
   }
 
   &__filter-form {

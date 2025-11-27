@@ -80,10 +80,19 @@ const ProjectList: React.FC = () => {
         [handleCreate]
     );
 
-    const handleDelete = useCallback(async (id: number) => {
+    const handleDelete = useCallback(async (id: number, status: string) => {
+        let content = '确定要删除此项目吗？此操作将删除项目及其相关文件。';
+
+        // 根据项目状态显示不同的提示信息
+        if (status === 'processing') {
+            content = '确定要删除此项目吗？此操作将先停止正在进行的处理任务，然后删除项目及其相关文件。';
+        } else if (status === 'ready') {
+            content = '确定要删除此项目吗？此操作将清理所有已生成的文件，然后删除项目记录。';
+        }
+
         Modal.confirm({
             title: '确认删除',
-            content: '确定要删除此项目吗？此操作将删除项目及其相关文件。',
+            content: content,
             okText: '确认',
             cancelText: '取消',
             onOk: async () => {
@@ -122,6 +131,27 @@ const ProjectList: React.FC = () => {
         });
     }, [setGlobalLoading]);
 
+    const handleStopProcess = useCallback(async (id: number) => {
+        Modal.confirm({
+            title: '停止处理',
+            content: '确定要停止处理此项目吗？这将中断正在进行的处理任务并清理已生成的文件。',
+            okText: '确认',
+            cancelText: '取消',
+            onOk: async () => {
+                setGlobalLoading(true);
+                try {
+                    await client.post(`/projects/${id}/stop`);
+                    message.success('项目处理已停止');
+                    fetchProjects();
+                } catch (error) {
+                    message.error('停止处理失败');
+                } finally {
+                    setGlobalLoading(false);
+                }
+            }
+        });
+    }, [setGlobalLoading]);
+
     // 防抖处理函数
     const debouncedProcess = useCallback(
         debounce((id: number) => {
@@ -130,17 +160,22 @@ const ProjectList: React.FC = () => {
         [handleProcess]
     );
 
+    // 防抖停止处理函数
+    const debouncedStopProcess = useCallback(
+        debounce((id: number) => {
+            handleStopProcess(id);
+        }, 500),
+        [handleStopProcess]
+    );
+
     // 防抖删除函数
     const debouncedDelete = useCallback(
-        debounce((id: number) => {
-            handleDelete(id);
+        debounce((id: number, status: string) => {
+            handleDelete(id, status);
         }, 500),
         [handleDelete]
     );
 
-    const getStatusTagClass = (status: string) => {
-        return `project-list__status-tag--${status}`;
-    };
 
     const getStatusText = (status: string) => {
         const statusMap: Record<string, string> = {
@@ -152,7 +187,21 @@ const ProjectList: React.FC = () => {
         return statusMap[status] || status;
     };
 
+    const getStatusTagClass = (status: string) => {
+        const statusMap: Record<string, string> = {
+            'ready': 'project-list__status--ready',
+            'processing': 'project-list__status--processing',
+            'error': 'project-list__status--error',
+            'pending': 'project-list__status--pending'
+        };
+        return statusMap[status] || 'project-list__status--default';
+    };
+
     const handleViewDetail = useCallback((project: Project) => {
+        if (!project || !project.id) {
+            message.error('无效的项目数据');
+            return;
+        }
         setCurrentProject(project);
         setDetailModalVisible(true);
     }, []);
@@ -211,17 +260,11 @@ const ProjectList: React.FC = () => {
             dataIndex: 'status',
             key: 'status',
             render: (status: string) => {
-                let color = 'default';
-                if (status === 'ready') color = 'success';
-                if (status === 'processing') color = 'processing';
-                if (status === 'error') color = 'error';
                 return (
-                    <Tag
-                        color={color}
-                        className={getStatusTagClass(status)}
-                    >
-                        {getStatusText(status)}
-                    </Tag>
+                    <div className="project-list__status-indicator">
+                        <div className={`project-list__status-icon project-list__status-icon--${status}`}></div>
+                        <span className="project-list__status-text">{getStatusText(status)}</span>
+                    </div>
                 );
             },
         },
@@ -260,14 +303,25 @@ const ProjectList: React.FC = () => {
             key: 'action',
             render: (_: any, record: Project) => (
                 <Space>
-                    <Button
-                        type="primary"
-                        className="project-list__action-button--process"
-                        onClick={() => debouncedProcess(record.id)}
-                        disabled={record.status === 'processing' || record.status === 'ready'}
-                    >
-                        开始处理
-                    </Button>
+                    {record.status === 'processing' ? (
+                        <Button
+                            type="primary"
+                            danger
+                            className="project-list__action-button--stop"
+                            onClick={() => debouncedStopProcess(record.id)}
+                        >
+                            停止处理
+                        </Button>
+                    ) : (
+                        <Button
+                            type="primary"
+                            className="project-list__action-button--process"
+                            onClick={() => debouncedProcess(record.id)}
+                            disabled={record.status === 'ready'}
+                        >
+                            开始处理
+                        </Button>
+                    )}
                     <Button
                         type="default"
                         className="project-list__action-button--view"
@@ -278,7 +332,7 @@ const ProjectList: React.FC = () => {
                     <Button
                         danger
                         className="project-list__action-button--delete"
-                        onClick={() => debouncedDelete(record.id)}
+                        onClick={() => debouncedDelete(record.id, record.status)}
                     >
                         删除
                     </Button>
@@ -402,7 +456,7 @@ const ProjectList: React.FC = () => {
                 ]}
                 width={600}
             >
-                {currentProject && (
+                {currentProject ? (
                     <Descriptions column={1} bordered>
                         <Descriptions.Item label="项目名称">
                             {currentProject.name}
@@ -460,6 +514,10 @@ const ProjectList: React.FC = () => {
                             {currentProject.updated_at ? new Date(currentProject.updated_at).toLocaleString() : '暂无'}
                         </Descriptions.Item>
                     </Descriptions>
+                ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <p>项目信息加载中...</p>
+                    </div>
                 )}
             </Modal>
         </div>
