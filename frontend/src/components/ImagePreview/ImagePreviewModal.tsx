@@ -109,6 +109,9 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
         height: isFullscreen ? 'calc(100vh - 108px)' : 'auto',
         overflow: 'auto',
         backgroundColor: '#f5f5f5',
+        backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
+        backgroundSize: '20px 20px',
+        backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
         padding: isFullscreen ? 0 : 16
       }}>
         <img
@@ -120,7 +123,9 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             maxHeight: isFullscreen ? '100%' : '600px',
             transform: `scale(${zoomLevel})`,
             transition: 'transform 0.3s ease',
-            cursor: zoomLevel > 1 ? 'grab' : 'default'
+            cursor: zoomLevel > 1 ? 'grab' : 'default',
+            border: '1px solid #ddd',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
           }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}

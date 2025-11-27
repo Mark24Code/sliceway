@@ -56,6 +56,9 @@ background-size: cover;`;
                             maxWidth: 200,
                             height: 120,
                             backgroundColor: '#f5f5f5',
+                            backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
+                            backgroundSize: '10px 10px',
+                            backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -72,7 +75,8 @@ background-size: cover;`;
                             style={{
                                 maxWidth: '100%',
                                 maxHeight: '100%',
-                                objectFit: 'contain'
+                                objectFit: 'contain',
+                                border: '1px solid #ccc'
                             }}
                         />
                     </div>
