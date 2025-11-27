@@ -100,7 +100,7 @@ const ProjectDetail: React.FC = () => {
                     <div className="project-detail__layout-title">
                         <h3>项目：{project.name}</h3>
                         <div style={{ marginTop: 8 }}>
-                            <Tag color={getStatusColor(project.status)}>
+                            状态：<Tag color={getStatusColor(project.status)}>
                                 {getStatusText(project.status)}
                             </Tag>
                         </div>
