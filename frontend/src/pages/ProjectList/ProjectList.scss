@@ -126,6 +126,22 @@
       text-decoration: underline;
     }
   }
+
+  &__filter-form {
+    .ant-form-item {
+      margin-bottom: 0;
+      margin-right: 16px;
+
+      &:last-child {
+        margin-right: 0;
+      }
+
+      .ant-form-item-label > label {
+        font-weight: 500;
+        color: #262626;
+      }
+    }
+  }
 }
 
 // 响应式设计
@@ -140,6 +156,17 @@
 
       &-actions {
         justify-content: flex-end;
+      }
+    }
+
+    &__filter-form {
+      .ant-form-item {
+        margin-right: 8px;
+        margin-bottom: 8px;
+
+        .ant-form-item-label {
+          padding-bottom: 4px;
+        }
       }
     }
   }

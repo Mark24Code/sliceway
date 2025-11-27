@@ -304,41 +304,49 @@ const ProjectList: React.FC = () => {
 
             {/* 筛选表单 */}
             <div className="project-list__filters" style={{ marginBottom: 16, padding: 16, background: '#fafafa', borderRadius: 6 }}>
-                <Space wrap>
-                    <Input
-                        placeholder="按项目名称搜索"
-                        value={nameFilter}
-                        onChange={e => setNameFilter(e.target.value)}
-                        style={{ width: 200 }}
-                    />
-                    <Select
-                        placeholder="选择状态"
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        style={{ width: 120 }}
-                        allowClear
-                    >
-                        <Select.Option value="ready">就绪</Select.Option>
-                        <Select.Option value="processing">处理中</Select.Option>
-                        <Select.Option value="error">错误</Select.Option>
-                        <Select.Option value="pending">待处理</Select.Option>
-                    </Select>
-                    <DatePicker.RangePicker
-                        placeholder={['开始时间', '结束时间']}
-                        value={dateRangeFilter}
-                        onChange={(dates) => setDateRangeFilter(dates as [Dayjs, Dayjs] | null)}
-                        style={{ width: 240 }}
-                    />
-                    <Button
-                        onClick={() => {
-                            setNameFilter('');
-                            setStatusFilter('');
-                            setDateRangeFilter(null);
-                        }}
-                    >
-                        清除筛选
-                    </Button>
-                </Space>
+                <Form layout="inline" className="project-list__filter-form">
+                    <Form.Item label="项目名称">
+                        <Input
+                            placeholder="按项目名称搜索"
+                            value={nameFilter}
+                            onChange={e => setNameFilter(e.target.value)}
+                            style={{ width: 200 }}
+                        />
+                    </Form.Item>
+                    <Form.Item label="项目状态">
+                        <Select
+                            placeholder="选择状态"
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                            style={{ width: 120 }}
+                            allowClear
+                        >
+                            <Select.Option value="ready">就绪</Select.Option>
+                            <Select.Option value="processing">处理中</Select.Option>
+                            <Select.Option value="error">错误</Select.Option>
+                            <Select.Option value="pending">待处理</Select.Option>
+                        </Select>
+                    </Form.Item>
+                    <Form.Item label="创建时间">
+                        <DatePicker.RangePicker
+                            placeholder={['开始时间', '结束时间']}
+                            value={dateRangeFilter}
+                            onChange={(dates) => setDateRangeFilter(dates as [Dayjs, Dayjs] | null)}
+                            style={{ width: 240 }}
+                        />
+                    </Form.Item>
+                    <Form.Item>
+                        <Button
+                            onClick={() => {
+                                setNameFilter('');
+                                setStatusFilter('');
+                                setDateRangeFilter(null);
+                            }}
+                        >
+                            清除筛选
+                        </Button>
+                    </Form.Item>
+                </Form>
             </div>
 
             <Table
