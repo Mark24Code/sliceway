@@ -311,8 +311,8 @@ const ProjectList: React.FC = () => {
             key: 'psd_path',
             render: (path: string) => path ? (
                 <Tooltip title={path} placement="topLeft">
-                    <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
-                        {truncatePathFromStart(path, 35)}
+                    <span style={{ maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        {truncatePathFromStart(path, 20)}
                     </span>
                 </Tooltip>
             ) : '-',
@@ -323,8 +323,8 @@ const ProjectList: React.FC = () => {
             key: 'export_path',
             render: (path: string) => path ? (
                 <Tooltip title={path} placement="topLeft">
-                    <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
-                        {truncatePathFromStart(path, 35)}
+                    <span style={{ maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        {truncatePathFromStart(path, 20)}
                     </span>
                 </Tooltip>
             ) : '-',
