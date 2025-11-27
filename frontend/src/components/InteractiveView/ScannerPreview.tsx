@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { projectAtom, scannerPositionAtom, hoverLayerIdAtom, layersAtom, previewZoomAtom } from '../../store/atoms';
 import { IMAGE_BASE_URL } from '../../config';
@@ -9,6 +9,7 @@ const ScannerPreview: React.FC = () => {
     const [, setScannerPosition] = useAtom(scannerPositionAtom);
     const [hoverLayerId] = useAtom(hoverLayerIdAtom);
     const zoom = useAtomValue(previewZoomAtom);
+    const [scannerWidth, setScannerWidth] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
 
@@ -27,6 +28,21 @@ const ScannerPreview: React.FC = () => {
             setScannerPosition(actualScanLineY);
         }
     };
+
+    useEffect(() => {
+        if (containerRef.current) {
+            const updateWidth = () => {
+                const previewContainer = containerRef.current?.querySelector('.preview-container');
+                if (previewContainer) {
+                    setScannerWidth(previewContainer.clientWidth);
+                }
+            };
+
+            updateWidth();
+            window.addEventListener('resize', updateWidth);
+            return () => window.removeEventListener('resize', updateWidth);
+        }
+    }, []);
 
     const hoverLayer = layers.find(l => l.id === hoverLayerId);
 
@@ -65,7 +81,12 @@ const ScannerPreview: React.FC = () => {
                     />
                 )}
             </div>
-            <div className="scanner-line" />
+            <div
+                className="scanner-line"
+                style={{
+                    width: scannerWidth > 0 ? `${scannerWidth}px` : '100%'
+                }}
+            />
         </div>
     );
 };

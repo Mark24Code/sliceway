@@ -55,10 +55,10 @@ body {
     position: fixed;
     top: 25%;
     left: 0;
-    width: 100%;
+    transform: translateX(216px);
     height: 2px;
     background-color: red;
-    z-index: 0; // 确保在图片上方
+    z-index: 200; // 确保在图片上方
     pointer-events: none;
     margin-top: -1px; // 精确居中
   }

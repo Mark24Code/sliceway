@@ -8,9 +8,6 @@ const PreviewControls: React.FC = () => {
     const [zoom, setZoom] = useAtom(previewZoomAtom);
 
     const zoomOptions = [
-        { label: '200%', value: 2 },
-        { label: '175%', value: 1.75 },
-        { label: '125%', value: 1.25 },
         { label: '100%', value: 1 },
         { label: '75%', value: 0.75 },
         { label: '50%', value: 0.5 }
