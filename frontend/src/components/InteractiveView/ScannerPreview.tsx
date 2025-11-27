@@ -13,8 +13,18 @@ const ScannerPreview: React.FC = () => {
     const imgRef = useRef<HTMLImageElement>(null);
 
     const handleScroll = () => {
-        if (containerRef.current) {
-            setScannerPosition(containerRef.current.scrollTop);
+        if (containerRef.current && imgRef.current) {
+            const scrollTop = containerRef.current.scrollTop;
+            const containerHeight = containerRef.current.clientHeight;
+
+            // 计算扫描线在图片上的实际位置
+            // 扫描线在容器中间 (50%)，加上滚动偏移
+            const scanLineImageY = scrollTop + (containerHeight / 2);
+
+            // 考虑缩放级别
+            const actualScanLineY = scanLineImageY / zoom;
+
+            setScannerPosition(actualScanLineY);
         }
     };
 
@@ -28,7 +38,7 @@ const ScannerPreview: React.FC = () => {
             onScroll={handleScroll}
             className="scanner-preview"
         >
-            <div style={{ position: 'relative' }}>
+            <div className='preview-container' style={{ position: 'relative' }}>
                 <img
                     ref={imgRef}
                     src={`${IMAGE_BASE_URL}/processed/${project.id}/full_preview.png`}
@@ -42,22 +52,19 @@ const ScannerPreview: React.FC = () => {
                         height: 'auto'
                     }}
                 />
-
                 {/* Highlight Box */}
                 {hoverLayer && (
                     <div
                         className="highlight-box"
                         style={{
                             left: hoverLayer.x * zoom,
-                            top: hoverLayer.y * zoom,
+                            top: hoverLayer.y * zoom - (containerRef.current?.scrollTop || 0),
                             width: hoverLayer.width * zoom,
                             height: hoverLayer.height * zoom,
                         }}
                     />
                 )}
             </div>
-
-            {/* Red Line Overlay */}
             <div className="scanner-line" />
         </div>
     );
