@@ -8,6 +8,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Project } from '../../types';
+import { truncatePathFromStart } from '../../utils/string';
 import './ProjectList.scss';
 
 const { Dragger } = Upload;
@@ -311,7 +312,7 @@ const ProjectList: React.FC = () => {
             render: (path: string) => path ? (
                 <Tooltip title={path} placement="topLeft">
                     <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
-                        {path}
+                        {truncatePathFromStart(path, 35)}
                     </span>
                 </Tooltip>
             ) : '-',
@@ -323,7 +324,7 @@ const ProjectList: React.FC = () => {
             render: (path: string) => path ? (
                 <Tooltip title={path} placement="topLeft">
                     <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
-                        {path}
+                        {truncatePathFromStart(path, 35)}
                     </span>
                 </Tooltip>
             ) : '-',
