@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+require_relative '../lib/database'
+require_relative '../lib/psd_processor'
+
+if ARGV.empty?
+  puts "Usage: bin/process_psd <project_id>"
+  exit 1
+end
+
+project_id = ARGV[0]
+
+begin
+  puts "Starting processing for project #{project_id}..."
+  PsdProcessor.new(project_id).call
+  puts "Processing complete for project #{project_id}."
+rescue => e
+  puts "Fatal error in process_psd: #{e.message}"
+  puts e.backtrace
+  exit 1
+end

@@ -44,18 +44,12 @@ post '/api/projects' do
       status: 'pending'
     )
     
-    # Trigger processing in a thread
-    task_thread = Thread.new do
-      begin
-        PsdProcessor.new(project.id).call
-      ensure
-        # 任务完成后从运行任务列表中移除
-        $running_tasks.delete(project.id)
-      end
-    end
+    # Trigger processing in a separate process
+    pid = spawn("bundle exec ruby bin/process_psd #{project.id}")
+    Process.detach(pid) # Avoid zombie processes
 
-    # 保存任务线程到全局变量
-    $running_tasks[project.id] = task_thread
+    # 保存任务PID到全局变量
+    $running_tasks[project.id] = pid
     
     json project
   else
@@ -81,21 +75,12 @@ post '/api/projects/:id/process' do
   # 更新项目状态为处理中
   project.update(status: 'processing')
 
-  # 在后台线程中处理PSD文件
-  task_thread = Thread.new do
-    begin
-      PsdProcessor.new(project.id).call
-    rescue => e
-      project.update(status: 'error')
-      puts "PSD处理失败: #{e.message}"
-    ensure
-      # 任务完成后从运行任务列表中移除
-      $running_tasks.delete(project.id)
-    end
-  end
+  # 在后台进程中处理PSD文件
+  pid = spawn("bundle exec ruby bin/process_psd #{project.id}")
+  Process.detach(pid)
 
-  # 保存任务线程到全局变量
-  $running_tasks[project.id] = task_thread
+  # 保存任务PID到全局变量
+  $running_tasks[project.id] = pid
 
   json success: true
 end
@@ -112,9 +97,13 @@ post '/api/projects/:id/stop' do
 
   # 中止对应的处理任务
   if $running_tasks[project.id]
-    Thread.kill($running_tasks[project.id])
+    begin
+      Process.kill("TERM", $running_tasks[project.id])
+      puts "中止了项目 #{project.id} 的处理任务 (PID: #{$running_tasks[project.id]})"
+    rescue Errno::ESRCH
+      puts "进程 #{$running_tasks[project.id]} 不存在"
+    end
     $running_tasks.delete(project.id)
-    puts "中止了项目 #{project.id} 的处理任务"
   end
 
   # 清理已生成的文件
@@ -159,9 +148,13 @@ delete '/api/projects/:id' do
     # 如果项目正在处理中，先中止后台任务
     puts "项目 #{project.id} 正在处理中，先中止处理任务..."
     if $running_tasks[project.id]
-      Thread.kill($running_tasks[project.id])
+      begin
+        Process.kill("TERM", $running_tasks[project.id])
+        puts "已中止项目 #{project.id} 的处理任务 (PID: #{$running_tasks[project.id]})"
+      rescue Errno::ESRCH
+        puts "进程 #{$running_tasks[project.id]} 不存在"
+      end
       $running_tasks.delete(project.id)
-      puts "已中止项目 #{project.id} 的处理任务"
     end
 
   when 'ready'
