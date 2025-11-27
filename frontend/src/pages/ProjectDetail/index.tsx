@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, Spin, message, Tag } from 'antd';
-import { useParams } from 'react-router-dom';
+import { Layout, Menu, Spin, message, Tag, Button } from 'antd';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAtom } from 'jotai';
-import { AppstoreOutlined, ScanOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, ScanOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { projectAtom, layersAtom } from '../../store/atoms';
 import client from '../../api/client';
 import FullListView from '../../components/ListView/FullListView';
@@ -13,6 +13,7 @@ const { Sider, Content } = Layout;
 
 const ProjectDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const [project, setProject] = useAtom(projectAtom);
     const [, setLayers] = useAtom(layersAtom);
     const [loading, setLoading] = useState(true);
@@ -97,6 +98,23 @@ const ProjectDetail: React.FC = () => {
         <div className="project-detail">
             <Layout className="project-detail__layout">
                 <Sider theme="light" width={200}>
+                    {/* Logo 区域 */}
+                    <div className="project-detail__logo-area">
+                        <img src="/vite.svg" alt="Logo" className="project-detail__logo" />
+                    </div>
+
+                    {/* 返回按钮 */}
+                    <div className="project-detail__back-section">
+                        <Button
+                            type="text"
+                            icon={<ArrowLeftOutlined />}
+                            onClick={() => navigate('/projects')}
+                            className="project-detail__back-btn"
+                        >
+                            返回列表
+                        </Button>
+                    </div>
+
                     <div className="project-detail__layout-title">
                         <h3>项目：{project.name}</h3>
                         <div style={{ marginTop: 8 }}>
@@ -104,6 +122,12 @@ const ProjectDetail: React.FC = () => {
                                 {getStatusText(project.status)}
                             </Tag>
                         </div>
+                        {/* 新增页面尺寸信息 */}
+                        {project.width && project.height && (
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                                尺寸：{project.width} × {project.height} px
+                            </div>
+                        )}
                     </div>
                     <Menu
                         mode="inline"

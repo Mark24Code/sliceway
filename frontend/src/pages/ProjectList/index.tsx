@@ -557,6 +557,12 @@ const ProjectList: React.FC = () => {
                         <Descriptions.Item label="更新时间">
                             {currentProject.updated_at ? new Date(currentProject.updated_at).toLocaleString() : '暂无'}
                         </Descriptions.Item>
+                        <Descriptions.Item label="页面尺寸">
+                            {currentProject.width && currentProject.height
+                                ? `${currentProject.width} × ${currentProject.height} px`
+                                : '未设置'
+                            }
+                        </Descriptions.Item>
                     </Descriptions>
                 ) : (
                     <div style={{ textAlign: 'center', padding: '40px 0' }}>

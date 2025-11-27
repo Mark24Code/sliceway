@@ -12,9 +12,12 @@ class PsdProcessor
 
   def call
     @project.update(status: 'processing')
-    
+
     begin
       PSD.open(@project.psd_path) do |psd|
+        # Extract and save document dimensions
+        save_document_dimensions(psd)
+
         # 1. Export Full Preview
         export_full_preview(psd)
 
@@ -34,6 +37,17 @@ class PsdProcessor
   end
 
   private
+
+  def save_document_dimensions(psd)
+    # Extract document dimensions from PSD
+    width = psd.width
+    height = psd.height
+
+    # Save dimensions to project
+    @project.update(width: width, height: height)
+
+    puts "Document dimensions saved: #{width} x #{height} px"
+  end
 
   def export_full_preview(psd)
     path = File.join(@output_dir, "full_preview.png")

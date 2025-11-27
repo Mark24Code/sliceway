@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Descriptions, Typography, Divider } from 'antd';
 import { useAtom } from 'jotai';
-import { layersAtom, selectedLayerIdsAtom } from '../../store/atoms';
+import { layersAtom, selectedLayerIdsAtom, hoverLayerIdAtom } from '../../store/atoms';
 import { ImagePreviewModal } from '../ImagePreview/ImagePreviewModal';
 import { IMAGE_BASE_URL } from '../../config';
 
@@ -10,11 +10,12 @@ const { Title, Paragraph, Text } = Typography;
 const DetailPanel: React.FC = () => {
     const [layers] = useAtom(layersAtom);
     const [selectedLayerIds] = useAtom(selectedLayerIdsAtom);
+    const [hoverLayerId] = useAtom(hoverLayerIdAtom);
     const [previewVisible, setPreviewVisible] = useState(false);
 
-    // Show details for the last selected layer
-    const selectedId = selectedLayerIds[selectedLayerIds.length - 1];
-    const layer = layers.find(l => l.id === selectedId);
+    // 优先显示悬停图层，其次显示选中图层
+    const displayLayerId = hoverLayerId || selectedLayerIds[selectedLayerIds.length - 1];
+    const layer = layers.find(l => l.id === displayLayerId);
 
     // 缩略图点击处理
     const handleThumbnailClick = () => {

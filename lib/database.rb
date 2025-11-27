@@ -19,6 +19,8 @@ unless ActiveRecord::Base.connection.table_exists?(:projects)
       t.string :psd_path
       t.string :export_path
       t.string :status, default: 'pending' # pending, processing, ready, error
+      t.integer :width  # PSD document width
+      t.integer :height # PSD document height
       t.timestamps
     end
   end

@@ -6,6 +6,8 @@ export interface Project {
   status: 'pending' | 'processing' | 'ready' | 'error';
   created_at: string;
   updated_at: string;
+  width?: number;   // PSD 文档宽度
+  height?: number;  // PSD 文档高度
 }
 
 export interface Layer {

@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Tabs, Card, Checkbox, Button, message, Select, Space } from 'antd';
 import { useAtom } from 'jotai';
 import { debounce } from 'lodash';
-import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
+import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, hoverLayerIdAtom } from '../../store/atoms';
 import client from '../../api/client';
 import { IMAGE_BASE_URL } from '../../config';
 
@@ -13,11 +13,13 @@ const FilterList: React.FC = () => {
     const [scannerY] = useAtom(scannerPositionAtom);
     const [project] = useAtom(projectAtom);
     const [selectedLayerIds, setSelectedLayerIds] = useAtom(selectedLayerIdsAtom);
+    const [hoverLayerId, setHoverLayerId] = useAtom(hoverLayerIdAtom);
     const [, setGlobalLoading] = useAtom(globalLoadingAtom);
     const [activeTab, setActiveTab] = useState('all');
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
+    const hoverTimeoutRef = useRef<NodeJS.Timeout>();
 
     // Filter logic based on Scanner Position
     // scannerY 已经是换算后的图片坐标位置
@@ -108,6 +110,26 @@ const FilterList: React.FC = () => {
         );
     };
 
+    const handleMouseEnter = (layerId: number) => {
+        // 清除之前的超时
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+        }
+
+        // 设置新的 500ms 超时
+        hoverTimeoutRef.current = setTimeout(() => {
+            setHoverLayerId(layerId);
+        }, 500);
+    };
+
+    const handleMouseLeave = () => {
+        // 清除超时，防止延迟后触发悬停
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+        }
+        // 注意：不重置 hoverLayerId，保持显示最后一个悬停元素
+    };
+
     return (
         <div className="filter-list">
             <div className="header">
@@ -178,8 +200,14 @@ const FilterList: React.FC = () => {
                         hoverable
                         className="layer-card"
                         style={{
-                            border: selectedLayerIds.includes(layer.id) ? '2px solid #1890ff' : undefined
+                            border: selectedLayerIds.includes(layer.id)
+                                ? '2px solid #1890ff'
+                                : hoverLayerId === layer.id
+                                    ? '2px solid #52c41a'
+                                    : undefined
                         }}
+                        onMouseEnter={() => handleMouseEnter(layer.id)}
+                        onMouseLeave={handleMouseLeave}
                         cover={
                             <div
                                 className="cover"

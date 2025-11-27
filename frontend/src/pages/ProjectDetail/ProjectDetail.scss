@@ -2,6 +2,40 @@
 .project-detail {
   min-height: 100vh;
 
+  // Logo 区域
+  .project-detail__logo-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+
+    .project-detail__logo {
+      height: 40px;
+      width: auto;
+    }
+  }
+
+  // 返回按钮区域
+  .project-detail__back-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+
+    .project-detail__back-btn {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #f0f8ff;
+        color: #1890ff;
+      }
+    }
+  }
+
   .project-detail__layout-title {
     padding: 20px;
     margin-bottom: 20px;
