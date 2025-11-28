@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Spin, message, Tag, Button } from 'antd';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAtom } from 'jotai';
 import { AppstoreOutlined, ScanOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { projectAtom, layersAtom } from '../../store/atoms';
 import client from '../../api/client';
-import FullListView from '../../components/ListView/FullListView';
-import InteractiveView from '../../components/InteractiveView/InteractiveView';
 import './ProjectDetail.scss';
 
 const { Sider, Content } = Layout;
@@ -14,10 +12,13 @@ const { Sider, Content } = Layout;
 const ProjectDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const [project, setProject] = useAtom(projectAtom);
     const [, setLayers] = useAtom(layersAtom);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState<'list' | 'interactive'>('list');
+
+    // Determine current view based on URL
+    const currentView = location.pathname.includes('/list') ? 'list' : 'interactive';
 
     useEffect(() => {
         const fetchData = async () => {
@@ -144,8 +145,8 @@ const ProjectDetail: React.FC = () => {
                     </div>
                     <Menu
                         mode="inline"
-                        selectedKeys={[view]}
-                        onClick={({ key }) => setView(key as 'list' | 'interactive')}
+                        selectedKeys={[currentView]}
+                        onClick={({ key }) => navigate(key)}
                         items={[
                             {
                                 key: 'list',
@@ -162,8 +163,8 @@ const ProjectDetail: React.FC = () => {
                 </Sider>
                 <Layout>
                     <Content>
-                        <div className={`project-detail__view-container project-detail__view-container--${view}`}>
-                            {view === 'list' ? <FullListView /> : <InteractiveView />}
+                        <div className={`project-detail__view-container project-detail__view-container--${currentView}`}>
+                            <Outlet />
                         </div>
                     </Content>
                 </Layout>
