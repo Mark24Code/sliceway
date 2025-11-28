@@ -6,8 +6,9 @@ body {
 
 // Fix for Ant Design nested layout width issue
 .ant-layout.ant-layout-has-sider {
-  > .ant-layout,
-  > .ant-layout-content {
+
+  >.ant-layout,
+  >.ant-layout-content {
     width: 100%; // Ensure it takes full width
     overflow: hidden; // Prevent overflow from breaking layout
   }
@@ -15,11 +16,11 @@ body {
 
 .interactive-view-container {
   height: 100%;
-  
+
   .ant-layout {
     height: 100%;
   }
-  
+
   .scanner-section {
     flex: 1 1 0; // Give more space to scanner section
     overflow: hidden;
@@ -28,7 +29,7 @@ body {
     display: flex;
     flex-direction: column;
   }
-  
+
   .filter-section {
     flex: 1 1 0;
     overflow: hidden;
@@ -46,14 +47,14 @@ body {
   background-color: #f0f2f5;
 
   // 确保图片和扫描线在同一容器内重叠
-  > div {
+  >div {
     position: relative;
     width: 100%;
   }
 
   .scanner-line {
     position: fixed;
-    top: 25%;
+    top: 0;
     left: 0;
     transform: translateX(216px);
     height: 2px;
@@ -62,7 +63,8 @@ body {
     pointer-events: none;
     margin-top: -1px; // 精确居中
   }
-  
+
+
   .highlight-box {
     position: absolute;
     border: 2px solid #1890ff;
@@ -76,7 +78,7 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  
+
   .header {
     padding: 8px 16px;
     border-bottom: 1px solid #eee;
@@ -84,7 +86,7 @@ body {
     justify-content: space-between;
     flex-direction: column;
   }
-  
+
   .list-content {
     flex: 1;
     overflow-y: auto;
@@ -93,10 +95,10 @@ body {
     flex-wrap: wrap;
     gap: 16px;
   }
-  
+
   .layer-card {
     width: 140px;
-    
+
     .cover {
       height: 100px;
       display: flex;
@@ -105,13 +107,13 @@ body {
       background: #eee;
       cursor: pointer;
       position: relative;
-      
+
       img {
         max-width: 100%;
         max-height: 100%;
       }
     }
-    
+
     .checkbox {
       position: absolute;
       top: 5px;

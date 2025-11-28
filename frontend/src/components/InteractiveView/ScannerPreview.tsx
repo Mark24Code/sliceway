@@ -5,27 +5,35 @@ import { IMAGE_BASE_URL } from '../../config';
 
 const ScannerPreview: React.FC = () => {
     const [project] = useAtom(projectAtom);
-    const [, setScannerPosition] = useAtom(scannerPositionAtom);
+    const [scannerY, setScannerPosition] = useAtom(scannerPositionAtom);
     const zoom = useAtomValue(previewZoomAtom);
     const [scannerWidth, setScannerWidth] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
+    const [visualScannerY, setVisualScannerY] = useState(0)
 
     const handleScroll = () => {
         if (containerRef.current && imgRef.current) {
+            // 因为容器的高度其实是图片高度决定的，zoom：100% 就是图片高度
+            // 偏移位置就是滚动条位置就是人的注意力位置
+            // 当比例缩小的时候，图片在原位置缩小，等价于 滚动条变大了，所以处以比例，换算到图片偏移比例 
             const scrollTop = containerRef.current.scrollTop;
-            const containerHeight = containerRef.current.clientHeight;
+            const clientHeight = containerRef.current.clientHeight;
+            // 等价图片偏移距离 
+            const realOffsetY = scrollTop / zoom;
+            setScannerPosition(realOffsetY);
 
-            // 计算扫描线在图片上的实际位置
-            // 扫描线在容器中间 (50%)，加上滚动偏移
-            const scanLineImageY = scrollTop + (containerHeight / 2);
+            // 视觉的线是根据 fixed 换算成 viewport 的移动距离
+            const imageHeight = imgRef.current?.naturalHeight
+            if (imageHeight) {
+                const ratio = realOffsetY < imageHeight ? realOffsetY / imageHeight : 1
+                setVisualScannerY(ratio * clientHeight)
+            }
 
-            // 考虑缩放级别
-            const actualScanLineY = scanLineImageY / zoom;
-
-            setScannerPosition(actualScanLineY);
         }
     };
+
+
 
     useEffect(() => {
         if (containerRef.current) {
@@ -64,13 +72,14 @@ const ScannerPreview: React.FC = () => {
                         height: 'auto'
                     }}
                 />
+                <div
+                    className="scanner-line"
+                    style={{
+                        top: `${visualScannerY}px`,
+                        width: scannerWidth > 0 ? `${scannerWidth}px` : '100%'
+                    }}
+                />
             </div>
-            <div
-                className="scanner-line"
-                style={{
-                    width: scannerWidth > 0 ? `${scannerWidth}px` : '100%'
-                }}
-            />
         </div>
     );
 };
