@@ -50,22 +50,8 @@ class PsdProcessor
   end
 
   def export_full_preview(psd)
-    filename = "full_preview.png"
-
-    begin
-      # 添加图像数据验证
-      unless psd.image && psd.image.respond_to?(:to_png)
-        puts "Warning: Invalid image data for full preview export"
-        return
-      end
-
-      png_data = psd.image.to_png
-      save_scaled_images(png_data, filename)
-    rescue => e
-      puts "Error exporting full preview: #{e.message}"
-      puts e.backtrace
-      # 可以考虑在这里实现降级策略
-    end
+    path = File.join(@output_dir, "full_preview.png")
+    psd.image.save_as_png(path)
   end
 
   def export_slices(psd)
