@@ -5,7 +5,7 @@ import { IMAGE_BASE_URL } from '../../config';
 
 const ScannerPreview: React.FC = () => {
     const [project] = useAtom(projectAtom);
-    const [scannerY, setScannerPosition] = useAtom(scannerPositionAtom);
+    const [, setScannerPosition] = useAtom(scannerPositionAtom);
     const zoom = useAtomValue(previewZoomAtom);
     const [scannerWidth, setScannerWidth] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);

@@ -1,11 +1,48 @@
 import React, { useState } from 'react';
-import { Descriptions, Typography, Divider } from 'antd';
+import { Descriptions, Typography, Divider, Tabs, Button, message } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import { useAtom } from 'jotai';
 import { layersAtom, selectedLayerIdsAtom, hoverLayerIdAtom } from '../../store/atoms';
 import { ImagePreviewModal } from '../ImagePreview/ImagePreviewModal';
 import { IMAGE_BASE_URL } from '../../config';
+import { CodeGenerator } from '../../utils/CodeGenerator';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title } = Typography;
+
+const CodeBlock: React.FC<{ code: string; language: string }> = ({ code, language }) => {
+    const handleCopy = () => {
+        navigator.clipboard.writeText(code);
+        message.success('代码已复制');
+    };
+
+    return (
+        <div style={{ position: 'relative' }}>
+            <Button
+                icon={<CopyOutlined />}
+                type="text"
+                size="small"
+                style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    zIndex: 1,
+                    color: '#fff',
+                    background: 'rgba(0,0,0,0.3)'
+                }}
+                onClick={handleCopy}
+            />
+            <SyntaxHighlighter
+                language={language}
+                style={vscDarkPlus}
+                customStyle={{ margin: 0, borderRadius: 4, fontSize: 12 }}
+            >
+                {code}
+            </SyntaxHighlighter>
+        </div>
+    );
+};
 
 const DetailPanel: React.FC = () => {
     const [layers] = useAtom(layersAtom);
@@ -34,17 +71,7 @@ const DetailPanel: React.FC = () => {
         return <div style={{ padding: 24, color: '#999' }}>选择一个图层查看详情</div>;
     }
 
-    const cssCode = layer.layer_type === 'text'
-        ? `/* Text Style */
-font-family: '${layer.metadata?.font?.name || 'inherit'}';
-font-size: ${layer.metadata?.font?.sizes?.[0] || 'inherit'}px;
-color: ${layer.metadata?.font?.colors?.[0] ? `rgb(${layer.metadata.font.colors[0].join(',')})` : 'inherit'};
-line-height: 1.5;`
-        : `/* Image Style */
-width: ${layer.width}px;
-height: ${layer.height}px;
-background-image: url('${layer.name}.png');
-background-size: cover;`;
+
 
     return (
         <div style={{ padding: 24 }}>
@@ -98,13 +125,18 @@ background-size: cover;`;
 
             <Divider />
 
-            <Title level={5}>CSS代码片段</Title>
-            <Paragraph>
-                <pre style={{ background: '#f5f5f5', padding: 10, borderRadius: 4, fontSize: 12 }}>
-                    {cssCode}
-                </pre>
-                <Text copyable={{ text: cssCode }}>复制代码</Text>
-            </Paragraph>
+            <Title level={5}>代码片段</Title>
+            <Tabs
+                defaultActiveKey="css"
+                items={[
+                    { label: 'CSS', key: 'css', children: <CodeBlock code={CodeGenerator.generateCSS(layer)} language="css" /> },
+                    { label: 'SCSS', key: 'scss', children: <CodeBlock code={CodeGenerator.generateSCSS(layer)} language="scss" /> },
+                    { label: 'Less', key: 'less', children: <CodeBlock code={CodeGenerator.generateLess(layer)} language="less" /> },
+                    { label: 'Vue', key: 'vue', children: <CodeBlock code={CodeGenerator.generateVue(layer)} language="html" /> },
+                    { label: 'React', key: 'react', children: <CodeBlock code={CodeGenerator.generateReact(layer)} language="jsx" /> },
+                    { label: 'JS', key: 'js', children: <CodeBlock code={JSON.stringify(CodeGenerator.generateJS(layer), null, 2)} language="javascript" /> },
+                ]}
+            />
 
             {/* 图片预览模态框 */}
             <ImagePreviewModal

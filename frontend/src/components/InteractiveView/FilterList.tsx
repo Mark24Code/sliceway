@@ -19,7 +19,7 @@ const FilterList: React.FC = () => {
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
-    const hoverTimeoutRef = useRef<NodeJS.Timeout>();
+    const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Filter logic based on Scanner Position
     // scannerY 已经是换算后的图片坐标位置
