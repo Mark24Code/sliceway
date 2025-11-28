@@ -56,14 +56,20 @@ class PsdProcessor
 
   def export_slices(psd)
     psd.slices.each do |slice|
+      # Skip slices with width=0 or height=0
+      if slice.width == 0 || slice.height == 0
+        puts "Skipping slice #{slice.name} with dimensions #{slice.width}x#{slice.height}"
+        next
+      end
+
       filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
-      
+
       begin
         png = slice.to_png
         next unless png
-        
+
         saved_path = save_scaled_images(png, filename)
-        
+
         Layer.create!(
           project_id: @project.id,
           resource_id: slice.id.to_s,
@@ -89,8 +95,14 @@ class PsdProcessor
       return
     end
 
+    # Skip nodes with width=0 or height=0
+    if node.width == 0 || node.height == 0
+      puts "Skipping node #{node.name} with dimensions #{node.width}x#{node.height}"
+      return
+    end
+
     layer_type = determine_type(node)
-    
+
     # Prepare record attributes
     attrs = {
       project_id: @project.id,
