@@ -142,6 +142,12 @@ const ProjectDetail: React.FC = () => {
                                 大小：{formatFileSize(project.file_size)}
                             </div>
                         )}
+                        {/* 导出倍率信息 */}
+                        {project.export_scales && project.export_scales.length > 0 && (
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+                                导出倍率：{project.export_scales.join(', ')}
+                            </div>
+                        )}
                     </div>
                     <Menu
                         mode="inline"

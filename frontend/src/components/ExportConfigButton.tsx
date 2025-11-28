@@ -35,6 +35,8 @@ const ExportConfigButton: React.FC<ExportConfigButtonProps> = ({ value, onChange
             <Modal
                 title="导出配置"
                 open={visible}
+                okText='确认'
+                cancelText='取消'
                 onOk={handleOk}
                 onCancel={handleCancel}
                 width={300}

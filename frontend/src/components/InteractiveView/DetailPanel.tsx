@@ -74,7 +74,7 @@ const DetailPanel: React.FC = () => {
 
 
     return (
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: 24, overflowY: 'scroll', height: '100%' }}>
             {/* 缩略图区域 */}
             {layer.image_path && (
                 <div style={{ marginBottom: 16, textAlign: 'center' }}>
