@@ -9,6 +9,7 @@ export interface Project {
   width?: number;   // PSD 文档宽度
   height?: number;  // PSD 文档高度
   file_size?: number; // PSD 文件大小 (bytes)
+  export_scales?: string[]; // 导出倍率
 }
 
 export interface Layer {

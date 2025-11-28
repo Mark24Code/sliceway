@@ -331,6 +331,18 @@ const ProjectList: React.FC = () => {
             ) : '-',
         },
         {
+            title: '导出倍率',
+            dataIndex: 'export_scales',
+            key: 'export_scales',
+            render: (scales: string[]) => (
+                <Space size={4}>
+                    {scales && scales.length > 0 ? scales.map(scale => (
+                        <Tag key={scale} color="blue">{scale}</Tag>
+                    )) : <Tag>1x</Tag>}
+                </Space>
+            ),
+        },
+        {
             title: '创建时间',
             dataIndex: 'created_at',
             key: 'created_at',
