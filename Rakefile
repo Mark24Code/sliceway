@@ -170,18 +170,18 @@ namespace :db do
     # 确认操作 - 在非交互式环境中自动确认
     puts "⚠️  确定要重置数据库吗？这将删除所有项目数据和导出记录"
 
-    # 检查是否在交互式环境中
-    if STDIN.tty? && STDOUT.tty?
-      print "   输入 'yes' 继续: "
-      confirmation = gets.chomp.downcase
+    # # 检查是否在交互式环境中
+    # if STDIN.tty? && STDOUT.tty?
+    #   print "   输入 'yes' 继续: "
+    #   confirmation = gets.chomp.downcase
 
-      unless confirmation == 'yes'
-        puts "❌ 操作已取消"
-        exit 0
-      end
-    else
-      puts "   ⚠️  非交互式环境，自动确认重置操作"
-    end
+    #   unless confirmation == 'yes'
+    #     puts "❌ 操作已取消"
+    #     exit 0
+    #   end
+    # else
+    #   puts "   ⚠️  非交互式环境，自动确认重置操作"
+    # end
 
     puts ""
 
@@ -383,20 +383,20 @@ namespace :project do
     # 确认操作 - 在非交互式环境中自动确认
     puts "⚠️  确定要重置整个项目吗？这将删除所有数据"
 
-    # 检查是否在交互式环境中
-    if STDIN.tty? && STDOUT.tty?
-      print "   输入 'yes' 继续: "
-      confirmation = gets.chomp.downcase
+    # # 检查是否在交互式环境中
+    # if STDIN.tty? && STDOUT.tty?
+    #   print "   输入 'yes' 继续: "
+    #   confirmation = gets.chomp.downcase
 
-      unless confirmation == 'yes'
-        puts "❌ 操作已取消"
-        exit 0
-      end
-    else
-      puts "   ⚠️  非交互式环境，自动确认重置操作"
-    end
+    #   unless confirmation == 'yes'
+    #     puts "❌ 操作已取消"
+    #     exit 0
+    #   end
+    # else
+    #   puts "   ⚠️  非交互式环境，自动确认重置操作"
+    # end
 
-    puts ""
+    # puts ""
 
     # 重置数据库
     Rake::Task['db:reset'].invoke

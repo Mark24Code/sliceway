@@ -2,11 +2,7 @@
 
 source "https://rubygems.org"
 
-# gem "rails"
-source "https://rubygems.pkg.github.com/mark24code" do
-  gem "psd", "4.0.0"
-end
-
+gem 'psd', git: 'https://github.com/Mark24Code/psd.rb.git', tag: 'v4.0.2'
 gem "sinatra"
 gem "sinatra-contrib"
 gem "sqlite3"
