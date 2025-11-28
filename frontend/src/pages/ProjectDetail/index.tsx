@@ -94,6 +94,14 @@ const ProjectDetail: React.FC = () => {
         }
     };
 
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
     return (
         <div className="project-detail">
             <Layout className="project-detail__layout">
@@ -126,6 +134,11 @@ const ProjectDetail: React.FC = () => {
                         {project.width && project.height && (
                             <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
                                 尺寸：{project.width} × {project.height} px
+                            </div>
+                        )}
+                        {project.file_size !== undefined && (
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+                                大小：{formatFileSize(project.file_size)}
                             </div>
                         )}
                     </div>

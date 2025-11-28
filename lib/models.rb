@@ -2,6 +2,12 @@ require 'json'
 
 class Project < ActiveRecord::Base
   has_many :layers, dependent: :destroy
+
+  def as_json(options = {})
+    super(options).merge({
+      'file_size' => (psd_path && File.exist?(psd_path)) ? File.size(psd_path) : 0
+    })
+  end
 end
 
 class Layer < ActiveRecord::Base
