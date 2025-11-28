@@ -2,6 +2,7 @@ require 'json'
 
 class Project < ActiveRecord::Base
   has_many :layers, dependent: :destroy
+  serialize :export_scales, coder: JSON
 
   def as_json(options = {})
     super(options).merge({

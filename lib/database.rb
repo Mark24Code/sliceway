@@ -19,11 +19,17 @@ unless ActiveRecord::Base.connection.table_exists?(:projects)
       t.string :psd_path
       t.string :export_path
       t.string :status, default: 'pending' # pending, processing, ready, error
+      t.text :export_scales # JSON array of scales: ["1x", "2x", "4x"]
       t.integer :width  # PSD document width
       t.integer :height # PSD document height
       t.timestamps
     end
   end
+end
+
+# Add export_scales column if it doesn't exist (for existing databases)
+unless ActiveRecord::Base.connection.column_exists?(:projects, :export_scales)
+  ActiveRecord::Base.connection.add_column :projects, :export_scales, :text
 end
 
 unless ActiveRecord::Base.connection.table_exists?(:layers)

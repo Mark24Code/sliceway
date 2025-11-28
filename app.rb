@@ -43,6 +43,7 @@ post '/api/projects' do
       name: params[:name] || filename,
       psd_path: File.absolute_path(target_path), # Store absolute path
       export_path: params[:export_path] || File.join(Dir.pwd, "exports", "#{Time.now.to_i}"),
+      export_scales: params[:export_scales] ? JSON.parse(params[:export_scales]) : ['1x'],
       status: 'pending'
     )
     
@@ -271,15 +272,37 @@ post '/api/projects/:id/export' do
   
   FileUtils.mkdir_p(project.export_path)
   
+  requested_scales = data['scales'] || ['1x']
+  
   layers.each do |layer|
     next unless layer.image_path
-    source = File.join("public", layer.image_path)
-    # Ensure unique filename in export
-    target = File.join(project.export_path, "#{layer.name}_#{layer.id}.png")
     
-    if File.exist?(source)
-      FileUtils.cp(source, target)
-      export_count += 1
+    # Get base path and extension
+    # image_path is like "processed/1/layer_123.png"
+    # We need to find variants like "processed/1/layer_123@2x.png"
+    
+    base_source = File.join("public", layer.image_path)
+    ext = File.extname(base_source)
+    base_name_without_ext = File.basename(base_source, ext)
+    dir_name = File.dirname(base_source)
+    
+    requested_scales.each do |scale|
+      # Determine source filename for this scale
+      if scale == '1x'
+        source = base_source
+        target_suffix = ""
+      else
+        source = File.join(dir_name, "#{base_name_without_ext}@#{scale}#{ext}")
+        target_suffix = "@#{scale}"
+      end
+      
+      # Determine target filename
+      target = File.join(project.export_path, "#{layer.name}_#{layer.id}#{target_suffix}#{ext}")
+      
+      if File.exist?(source)
+        FileUtils.cp(source, target)
+        export_count += 1
+      end
     end
   end
   

@@ -81,6 +81,7 @@ const ProjectList: React.FC = () => {
         const formData = new FormData();
         formData.append('name', values.name);
         if (values.export_path) formData.append('export_path', values.export_path);
+        if (values.export_scales) formData.append('export_scales', JSON.stringify(values.export_scales));
         if (values.file && values.file.length > 0) {
             formData.append('file', values.file[0].originFileObj);
         } else {
@@ -354,7 +355,7 @@ const ProjectList: React.FC = () => {
                     >
                         进入
                     </Button>
-                {record.status === 'processing' ? (
+                    {record.status === 'processing' ? (
                         <Button
                             type="primary"
                             danger
@@ -473,6 +474,13 @@ const ProjectList: React.FC = () => {
                     </Form.Item>
                     <Form.Item name="export_path" label="导出路径">
                         <Input placeholder="可选：导出的绝对路径" />
+                    </Form.Item>
+                    <Form.Item name="export_scales" label="导出倍率" initialValue={['1x']}>
+                        <Select mode="multiple" placeholder="选择导出倍率">
+                            <Select.Option value="1x">1x</Select.Option>
+                            <Select.Option value="2x">2x</Select.Option>
+                            <Select.Option value="4x">4x</Select.Option>
+                        </Select>
                     </Form.Item>
                     <Form.Item name="file" label="PSD文件" valuePropName="fileList" getValueFromEvent={(e: any) => {
                         if (Array.isArray(e)) return e;

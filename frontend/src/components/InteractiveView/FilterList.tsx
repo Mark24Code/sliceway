@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Tabs, Card, Checkbox, Button, message, Select, Space } from 'antd';
+import { Tabs, Card, Checkbox, Button, message, Select, Space, Popover } from 'antd';
 import { useAtom } from 'jotai';
+import { SettingOutlined } from '@ant-design/icons';
 import { debounce } from 'lodash';
 import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, hoverLayerIdAtom } from '../../store/atoms';
 import client from '../../api/client';
@@ -82,19 +83,24 @@ const FilterList: React.FC = () => {
         return list;
     }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, activeTab]);
 
+    const [exportScales, setExportScales] = useState<string[]>(['1x']);
+
     const handleExport = useCallback(async () => {
         if (!project || selectedLayerIds.length === 0) return;
 
         setGlobalLoading(true);
         try {
-            const res = await client.post(`/projects/${project.id}/export`, { layer_ids: selectedLayerIds });
+            const res = await client.post(`/projects/${project.id}/export`, {
+                layer_ids: selectedLayerIds,
+                scales: exportScales
+            });
             message.success(`已导出 ${res.data.count} 个文件`);
         } catch (error) {
             message.error('导出失败');
         } finally {
             setGlobalLoading(false);
         }
-    }, [project, selectedLayerIds, setGlobalLoading]);
+    }, [project, selectedLayerIds, exportScales, setGlobalLoading]);
 
     // 防抖导出函数
     const debouncedExport = useCallback(
@@ -180,9 +186,24 @@ const FilterList: React.FC = () => {
                             <Select.Option value="vertical">纵向</Select.Option>
                         </Select>
                     </div>
-                    <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
-                        导出 ({selectedLayerIds.length})
-                    </Button>
+                    <Space>
+                        <Popover
+                            content={
+                                <Checkbox.Group
+                                    options={['1x', '2x', '4x']}
+                                    value={exportScales}
+                                    onChange={(values) => setExportScales(values as string[])}
+                                />
+                            }
+                            title="导出配置"
+                            trigger="click"
+                        >
+                            <Button icon={<SettingOutlined />} />
+                        </Popover>
+                        <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
+                            导出 ({selectedLayerIds.length})
+                        </Button>
+                    </Space>
                 </Space>
                 <Tabs activeKey={activeTab} onChange={setActiveTab} style={{ marginBottom: 0 }}>
                     <TabPane tab="全部" key="all" />

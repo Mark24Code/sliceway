@@ -50,21 +50,19 @@ class PsdProcessor
   end
 
   def export_full_preview(psd)
-    path = File.join(@output_dir, "full_preview.png")
-    psd.image.save_as_png(path)
+    filename = "full_preview.png"
+    save_scaled_images(psd.image.to_png, filename)
   end
 
   def export_slices(psd)
     psd.slices.each do |slice|
       filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
-      path = File.join(@output_dir, filename)
       
-      # slice.to_png.save(path, :fast_rgba) 
-      # Note: slice.to_png might return nil if empty or invalid, wrap in rescue
       begin
         png = slice.to_png
         next unless png
-        png.save(path, :fast_rgba)
+        
+        saved_path = save_scaled_images(png, filename)
         
         Layer.create!(
           project_id: @project.id,
@@ -75,7 +73,8 @@ class PsdProcessor
           y: slice.top,
           width: slice.width,
           height: slice.height,
-          image_path: relative_path(filename)
+          image_path: saved_path,
+          metadata: { scales: @project.export_scales || ['1x'] }
         )
       rescue => e
         puts "Failed to export slice #{slice.name}: #{e.message}"
@@ -102,7 +101,7 @@ class PsdProcessor
       width: node.width,
       height: node.height,
       parent_id: parent_id,
-      metadata: {}
+      metadata: { scales: @project.export_scales || ['1x'] }
     }
 
     # Handle specific types
@@ -126,26 +125,22 @@ class PsdProcessor
   def handle_group(node, attrs)
     # Export with text
     filename_with = "group_#{node.id}_with_text_#{SecureRandom.hex(4)}.png"
-    path_with = File.join(@output_dir, filename_with)
-    node.image.save_as_png(path_with) rescue nil # Group image might be empty if not composed? 
-    # Actually node.image on a group usually returns the composite if parsed with proper options, 
-    # or we might need node.to_png. Let's use to_png which is safer.
     
     begin
-      node.to_png.save(path_with, :fast_rgba)
-      attrs[:image_path] = relative_path(filename_with)
+      png = node.to_png
+      saved_path = save_scaled_images(png, filename_with)
+      attrs[:image_path] = saved_path
     rescue
       # If group is empty or fails
     end
 
     # Export without text (using logic from export_groups.rb)
     filename_without = "group_#{node.id}_no_text_#{SecureRandom.hex(4)}.png"
-    path_without = File.join(@output_dir, filename_without)
     
     begin
       png = render_group_without_text(node)
-      png.save(path_without, :fast_rgba)
-      attrs[:metadata][:image_path_no_text] = relative_path(filename_without)
+      saved_path = save_scaled_images(png, filename_without)
+      attrs[:metadata][:image_path_no_text] = saved_path
     rescue => e
       # puts "Failed no-text export: #{e.message}"
     end
@@ -158,20 +153,20 @@ class PsdProcessor
     end
     # Text layers also have an image representation usually
     filename = "text_#{node.id}_#{SecureRandom.hex(4)}.png"
-    path = File.join(@output_dir, filename)
     begin
-      node.to_png.save(path, :fast_rgba)
-      attrs[:image_path] = relative_path(filename)
+      png = node.to_png
+      saved_path = save_scaled_images(png, filename)
+      attrs[:image_path] = saved_path
     rescue
     end
   end
 
   def handle_layer(node, attrs)
     filename = "layer_#{node.id}_#{SecureRandom.hex(4)}.png"
-    path = File.join(@output_dir, filename)
     begin
-      node.to_png.save(path, :fast_rgba)
-      attrs[:image_path] = relative_path(filename)
+      png = node.to_png
+      saved_path = save_scaled_images(png, filename)
+      attrs[:image_path] = saved_path
     rescue
     end
   end
@@ -212,5 +207,42 @@ class PsdProcessor
 
   def relative_path(filename)
     File.join("processed", @project.id.to_s, filename)
+  end
+  
+  def save_scaled_images(png, base_filename)
+    return nil unless png
+    
+    scales = @project.export_scales || ['1x']
+    saved_base_path = nil
+    
+    base_name = File.basename(base_filename, ".*")
+    ext = File.extname(base_filename)
+    
+    scales.each do |scale|
+      if scale == '1x'
+        path = File.join(@output_dir, base_filename)
+        png.save(path, :fast_rgba)
+        saved_base_path = relative_path(base_filename)
+      else
+        # Calculate new dimensions
+        factor = scale.to_i
+        new_width = png.width * factor
+        new_height = png.height * factor
+        
+        # Resize using ChunkyPNG
+        # Note: psd.to_png returns a ChunkyPNG::Image
+        resized_png = png.resample_nearest_neighbor(new_width, new_height)
+        
+        filename = "#{base_name}@#{scale}#{ext}"
+        path = File.join(@output_dir, filename)
+        resized_png.save(path, :fast_rgba)
+        
+        # If 1x is not requested, we still need a base path for preview
+        # Use the first generated scale as the "base" path if not set
+        saved_base_path ||= relative_path(filename)
+      end
+    end
+    
+    saved_base_path
   end
 end
