@@ -194,6 +194,13 @@ const FilterList: React.FC = () => {
                         <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
                             导出 ({selectedLayerIds.length})
                         </Button>
+                        <Button
+                            type="default"
+                            disabled={selectedLayerIds.length === 0}
+                            onClick={() => setSelectedLayerIds([])}
+                        >
+                            清除导出
+                        </Button>
                     </Space>
                 </Space>
                 <Tabs activeKey={activeTab} onChange={setActiveTab} style={{ marginBottom: 0 }}>

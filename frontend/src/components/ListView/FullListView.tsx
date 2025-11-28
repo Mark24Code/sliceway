@@ -238,6 +238,13 @@ const FullListView: React.FC = () => {
                     导出选中项 ({selectedRowKeys.length})
                 </Button>
                 <Button
+                    type="default"
+                    disabled={selectedRowKeys.length === 0}
+                    onClick={() => setSelectedRowKeys([])}
+                >
+                    清除导出
+                </Button>
+                <Button
                     icon={<ReloadOutlined />}
                     onClick={handleRefresh}
                     loading={refreshing}
