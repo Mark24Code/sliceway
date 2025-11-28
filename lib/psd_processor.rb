@@ -51,7 +51,21 @@ class PsdProcessor
 
   def export_full_preview(psd)
     filename = "full_preview.png"
-    save_scaled_images(psd.image.to_png, filename)
+
+    begin
+      # 添加图像数据验证
+      unless psd.image && psd.image.respond_to?(:to_png)
+        puts "Warning: Invalid image data for full preview export"
+        return
+      end
+
+      png_data = psd.image.to_png
+      save_scaled_images(png_data, filename)
+    rescue => e
+      puts "Error exporting full preview: #{e.message}"
+      puts e.backtrace
+      # 可以考虑在这里实现降级策略
+    end
   end
 
   def export_slices(psd)
@@ -84,6 +98,7 @@ class PsdProcessor
         )
       rescue => e
         puts "Failed to export slice #{slice.name}: #{e.message}"
+        puts e.backtrace if e.message.include?('nil')
       end
     end
   end
@@ -137,24 +152,24 @@ class PsdProcessor
   def handle_group(node, attrs)
     # Export with text
     filename_with = "group_#{node.id}_with_text_#{SecureRandom.hex(4)}.png"
-    
+
     begin
       png = node.to_png
       saved_path = save_scaled_images(png, filename_with)
       attrs[:image_path] = saved_path
-    rescue
-      # If group is empty or fails
+    rescue => e
+      puts "Failed to export group #{node.name} with text: #{e.message}"
     end
 
     # Export without text (using logic from export_groups.rb)
     filename_without = "group_#{node.id}_no_text_#{SecureRandom.hex(4)}.png"
-    
+
     begin
       png = render_group_without_text(node)
       saved_path = save_scaled_images(png, filename_without)
       attrs[:metadata][:image_path_no_text] = saved_path
     rescue => e
-      # puts "Failed no-text export: #{e.message}"
+      puts "Failed to export group #{node.name} without text: #{e.message}"
     end
   end
 
@@ -169,7 +184,8 @@ class PsdProcessor
       png = node.to_png
       saved_path = save_scaled_images(png, filename)
       attrs[:image_path] = saved_path
-    rescue
+    rescue => e
+      puts "Failed to export text layer #{node.name}: #{e.message}"
     end
   end
 
@@ -179,7 +195,8 @@ class PsdProcessor
       png = node.to_png
       saved_path = save_scaled_images(png, filename)
       attrs[:image_path] = saved_path
-    rescue
+    rescue => e
+      puts "Failed to export layer #{node.name}: #{e.message}"
     end
   end
 
@@ -223,38 +240,49 @@ class PsdProcessor
   
   def save_scaled_images(png, base_filename)
     return nil unless png
-    
+
+    # 添加图像数据验证
+    unless png.respond_to?(:save) && png.respond_to?(:width) && png.respond_to?(:height)
+      puts "Warning: Invalid PNG data for #{base_filename}"
+      return nil
+    end
+
     scales = @project.export_scales || ['1x']
     saved_base_path = nil
-    
+
     base_name = File.basename(base_filename, ".*")
     ext = File.extname(base_filename)
-    
+
     scales.each do |scale|
-      if scale == '1x'
-        path = File.join(@output_dir, base_filename)
-        png.save(path, :fast_rgba)
-        saved_base_path = relative_path(base_filename)
-      else
-        # Calculate new dimensions
-        factor = scale.to_i
-        new_width = png.width * factor
-        new_height = png.height * factor
-        
-        # Resize using ChunkyPNG
-        # Note: psd.to_png returns a ChunkyPNG::Image
-        resized_png = png.resample_nearest_neighbor(new_width, new_height)
-        
-        filename = "#{base_name}@#{scale}#{ext}"
-        path = File.join(@output_dir, filename)
-        resized_png.save(path, :fast_rgba)
-        
-        # If 1x is not requested, we still need a base path for preview
-        # Use the first generated scale as the "base" path if not set
-        saved_base_path ||= relative_path(filename)
+      begin
+        if scale == '1x'
+          path = File.join(@output_dir, base_filename)
+          png.save(path, :fast_rgba)
+          saved_base_path = relative_path(base_filename)
+        else
+          # Calculate new dimensions
+          factor = scale.to_i
+          new_width = png.width * factor
+          new_height = png.height * factor
+
+          # Resize using ChunkyPNG
+          # Note: psd.to_png returns a ChunkyPNG::Image
+          resized_png = png.resample_nearest_neighbor(new_width, new_height)
+
+          filename = "#{base_name}@#{scale}#{ext}"
+          path = File.join(@output_dir, filename)
+          resized_png.save(path, :fast_rgba)
+
+          # If 1x is not requested, we still need a base path for preview
+          # Use the first generated scale as the "base" path if not set
+          saved_base_path ||= relative_path(filename)
+        end
+      rescue => e
+        puts "Error saving scaled image #{base_filename} at scale #{scale}: #{e.message}"
+        # 继续处理其他倍率
       end
     end
-    
+
     saved_base_path
   end
 end

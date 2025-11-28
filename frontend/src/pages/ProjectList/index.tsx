@@ -494,11 +494,11 @@ const ProjectList: React.FC = () => {
                             <Select.Option value="4x">4x</Select.Option>
                         </Select>
                     </Form.Item>
-                    <Form.Item name="file" label="PSD文件" valuePropName="fileList" getValueFromEvent={(e: any) => {
+                    <Form.Item name="file" label="PSD/PSB文件" valuePropName="fileList" getValueFromEvent={(e: any) => {
                         if (Array.isArray(e)) return e;
                         return e?.fileList;
-                    }} rules={[{ required: true, message: '请上传PSD文件' }]}>
-                        <Dragger maxCount={1} accept=".psd" beforeUpload={() => false}>
+                    }} rules={[{ required: true, message: '请上传PSD/PSB文件' }]}>
+                        <Dragger maxCount={1} accept=".psd,.psb" beforeUpload={() => false}>
                             <p className="ant-upload-drag-icon">
                                 <InboxOutlined />
                             </p>
