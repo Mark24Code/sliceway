@@ -1,5 +1,5 @@
 #!/usr/bin/env rake
-# PSD2IMG 项目管理脚本
+# Sliceway 项目管理脚本
 # 使用: rake <task_name>
 
 require 'fileutils'
@@ -15,7 +15,7 @@ PUBLIC_DIR = 'public'
 namespace :db do
   desc "初始化数据库结构"
   task :init do
-    puts "=== PSD2IMG 数据库初始化 ==="
+    puts "=== Sliceway 数据库初始化 ==="
     puts ""
 
     # 检查数据库文件是否存在
@@ -119,7 +119,7 @@ namespace :db do
 
   desc "重置数据库并清理文件"
   task :reset do
-    puts "=== PSD2IMG 数据库重置 ==="
+    puts "=== Sliceway 数据库重置 ==="
     puts ""
 
     # 检查数据库文件是否存在
@@ -167,14 +167,20 @@ namespace :db do
 
     puts ""
 
-    # 确认操作
+    # 确认操作 - 在非交互式环境中自动确认
     puts "⚠️  确定要重置数据库吗？这将删除所有项目数据和导出记录"
-    print "   输入 'yes' 继续: "
-    confirmation = gets.chomp.downcase
 
-    unless confirmation == 'yes'
-      puts "❌ 操作已取消"
-      exit 0
+    # 检查是否在交互式环境中
+    if STDIN.tty? && STDOUT.tty?
+      print "   输入 'yes' 继续: "
+      confirmation = gets.chomp.downcase
+
+      unless confirmation == 'yes'
+        puts "❌ 操作已取消"
+        exit 0
+      end
+    else
+      puts "   ⚠️  非交互式环境，自动确认重置操作"
     end
 
     puts ""
@@ -242,7 +248,7 @@ namespace :db do
 
   desc "显示数据库状态"
   task :status do
-    puts "=== PSD2IMG 数据库状态 ==="
+    puts "=== Sliceway 数据库状态 ==="
     puts ""
 
     if File.exist?(DATABASE_PATH)
@@ -289,7 +295,7 @@ end
 namespace :server do
   desc "启动后端服务器"
   task :start do
-    puts "=== 启动 PSD2IMG 后端服务器 ==="
+    puts "=== 启动 Sliceway 后端服务器 ==="
     puts ""
     puts "🚀 启动 Sinatra 服务器 (端口 4567)..."
     puts "   访问地址: http://localhost:4567"
@@ -309,7 +315,7 @@ namespace :server do
 
   desc "启动前端开发服务器"
   task :frontend do
-    puts "=== 启动 PSD2IMG 前端开发服务器 ==="
+    puts "=== 启动 Sliceway 前端开发服务器 ==="
     puts ""
     puts "🚀 启动 Vite 开发服务器 (端口 5173)..."
     puts "   访问地址: http://localhost:5173"
@@ -331,7 +337,7 @@ end
 namespace :project do
   desc "初始化项目（安装依赖）"
   task :init do
-    puts "=== PSD2IMG 项目初始化 ==="
+    puts "=== Sliceway 项目初始化 ==="
     puts ""
 
     # 安装后端依赖
@@ -371,17 +377,23 @@ namespace :project do
 
   desc "重置整个项目（清理所有数据）"
   task :reset do
-    puts "=== PSD2IMG 项目重置 ==="
+    puts "=== Sliceway 项目重置 ==="
     puts ""
 
-    # 确认操作
+    # 确认操作 - 在非交互式环境中自动确认
     puts "⚠️  确定要重置整个项目吗？这将删除所有数据"
-    print "   输入 'yes' 继续: "
-    confirmation = gets.chomp.downcase
 
-    unless confirmation == 'yes'
-      puts "❌ 操作已取消"
-      exit 0
+    # 检查是否在交互式环境中
+    if STDIN.tty? && STDOUT.tty?
+      print "   输入 'yes' 继续: "
+      confirmation = gets.chomp.downcase
+
+      unless confirmation == 'yes'
+        puts "❌ 操作已取消"
+        exit 0
+      end
+    else
+      puts "   ⚠️  非交互式环境，自动确认重置操作"
     end
 
     puts ""
@@ -395,7 +407,7 @@ namespace :project do
 
   desc "显示项目状态"
   task :status do
-    puts "=== PSD2IMG 项目状态 ==="
+    puts "=== Sliceway 项目状态 ==="
     puts ""
 
     # 检查后端依赖
@@ -424,7 +436,7 @@ end
 # 默认任务
 desc "显示所有可用任务"
 task :default do
-  puts "=== PSD2IMG 项目管理工具 ==="
+  puts "=== Sliceway 项目管理工具 ==="
   puts ""
   puts "📋 可用任务:"
   puts ""

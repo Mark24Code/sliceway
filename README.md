@@ -1,11 +1,11 @@
-# PSD2IMG - Photoshop 文件处理和导出工具
+# Sliceway - Photoshop 文件处理和导出工具
 
 这是一个基于 Ruby 和 React 的 PSD 文件处理和导出工具，支持切片、图层、文字和组的智能导出，具有增量更新和 Web 界面管理功能。
 
 ## 项目结构
 
 ```
-psd2img/
+Sliceway/
 ├── app.rb                 # Sinatra 后端主应用
 ├── Gemfile               # Ruby 依赖管理
 ├── lib/                  # 核心库文件
