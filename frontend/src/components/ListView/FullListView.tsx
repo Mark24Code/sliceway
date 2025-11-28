@@ -9,6 +9,7 @@ import type { Layer } from '../../types';
 import { LAYER_TYPE_MAP } from '../../types';
 import { ImagePreviewThumbnail, ImagePreviewModal, ImagePreviewHover } from '../ImagePreview';
 import { IMAGE_BASE_URL } from '../../config';
+import ExportConfigButton from '../ExportConfigButton';
 
 const FullListView: React.FC = () => {
     const [layers, setLayers] = useAtom(layersAtom);
@@ -20,6 +21,7 @@ const FullListView: React.FC = () => {
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [exportScales, setExportScales] = useState<string[]>(['1x']);
 
     // 图片预览模态框状态
     const [previewVisible, setPreviewVisible] = useState(false);
@@ -31,14 +33,17 @@ const FullListView: React.FC = () => {
 
         setGlobalLoading(true);
         try {
-            const res = await client.post(`/projects/${project.id}/export`, { layer_ids: ids });
+            const res = await client.post(`/projects/${project.id}/export`, {
+                layer_ids: ids,
+                scales: exportScales
+            });
             message.success(`已导出 ${res.data.count} 个文件到 ${res.data.path}`);
         } catch (error) {
             message.error('导出失败');
         } finally {
             setGlobalLoading(false);
         }
-    }, [project, setGlobalLoading]);
+    }, [project, exportScales, setGlobalLoading]);
 
     const handleRefresh = useCallback(async () => {
         if (!project) return;
@@ -221,6 +226,10 @@ const FullListView: React.FC = () => {
                     <Select.Option value="horizontal">横向</Select.Option>
                     <Select.Option value="vertical">纵向</Select.Option>
                 </Select>
+                <ExportConfigButton
+                    value={exportScales}
+                    onChange={setExportScales}
+                />
                 <Button
                     type="primary"
                     disabled={selectedRowKeys.length === 0}

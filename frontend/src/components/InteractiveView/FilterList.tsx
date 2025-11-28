@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Tabs, Card, Checkbox, Button, message, Select, Space, Popover } from 'antd';
+import { Tabs, Card, Checkbox, Button, message, Select, Space } from 'antd';
 import { useAtom } from 'jotai';
-import { SettingOutlined } from '@ant-design/icons';
+import ExportConfigButton from '../ExportConfigButton';
 import { debounce } from 'lodash';
 import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, hoverLayerIdAtom } from '../../store/atoms';
 import client from '../../api/client';
@@ -187,19 +187,10 @@ const FilterList: React.FC = () => {
                         </Select>
                     </div>
                     <Space>
-                        <Popover
-                            content={
-                                <Checkbox.Group
-                                    options={['1x', '2x', '4x']}
-                                    value={exportScales}
-                                    onChange={(values) => setExportScales(values as string[])}
-                                />
-                            }
-                            title="导出配置"
-                            trigger="click"
-                        >
-                            <Button icon={<SettingOutlined />} />
-                        </Popover>
+                        <ExportConfigButton
+                            value={exportScales}
+                            onChange={setExportScales}
+                        />
                         <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
                             导出 ({selectedLayerIds.length})
                         </Button>
