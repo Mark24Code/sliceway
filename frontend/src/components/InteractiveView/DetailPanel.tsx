@@ -68,7 +68,10 @@ const DetailPanel: React.FC = () => {
     const imageUrl = layer?.image_path ? `${IMAGE_BASE_URL}/${layer.image_path}` : '';
 
     if (!layer) {
-        return <div style={{ padding: 24, color: '#999' }}>选择一个图层查看详情</div>;
+        return <div style={{ transform: 'translateY(50%)', padding: 24, color: '#999', textAlign:'center'}}>
+            <p>鼠标悬浮在一个“图层”</p>
+            <p>查看详情</p>
+        </div>;
     }
 
 
