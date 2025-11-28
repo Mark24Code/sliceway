@@ -29,6 +29,7 @@ const ProjectList: React.FC = () => {
     // 查看详情状态
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [currentProject, setCurrentProject] = useState<Project | null>(null);
+    const [systemCores, setSystemCores] = useState<{ cores: number; max_available: number }>({ cores: 1, max_available: 1 });
 
     const fetchProjects = async () => {
         setLoading(true);
@@ -42,8 +43,18 @@ const ProjectList: React.FC = () => {
         }
     };
 
+    const fetchSystemCores = async () => {
+        try {
+            const res = await client.get('/system/cores');
+            setSystemCores(res.data);
+        } catch (error) {
+            console.error('获取系统核心数失败:', error);
+        }
+    };
+
     useEffect(() => {
         fetchProjects();
+        fetchSystemCores();
 
         // WebSocket connection
         const ws = new WebSocket('ws://localhost:4567/ws');
@@ -82,6 +93,7 @@ const ProjectList: React.FC = () => {
         formData.append('name', values.name);
         if (values.export_path) formData.append('export_path', values.export_path);
         if (values.export_scales) formData.append('export_scales', JSON.stringify(values.export_scales));
+        if (values.processing_cores) formData.append('processing_cores', values.processing_cores.toString());
         if (values.file && values.file.length > 0) {
             formData.append('file', values.file[0].originFileObj);
         } else {
@@ -343,6 +355,14 @@ const ProjectList: React.FC = () => {
             ),
         },
         {
+            title: '处理核心',
+            dataIndex: 'processing_cores',
+            key: 'processing_cores',
+            render: (cores: number) => (
+                <Tag color="green">{cores} 核心</Tag>
+            ),
+        },
+        {
             title: '创建时间',
             dataIndex: 'created_at',
             key: 'created_at',
@@ -494,6 +514,34 @@ const ProjectList: React.FC = () => {
                             <Select.Option value="4x">4x</Select.Option>
                         </Select>
                     </Form.Item>
+                    <Form.Item
+                        name="processing_cores"
+                        label="处理核心数目"
+                        initialValue={1}
+                        rules={[
+                            { required: true, message: '请输入处理核心数目' },
+                            {
+                                validator: (_, value) => {
+                                    const numValue = parseInt(value, 10);
+                                    if (isNaN(numValue)) {
+                                        return Promise.reject(new Error('请输入有效的数字'));
+                                    }
+                                    if (numValue < 1 || numValue > systemCores.max_available) {
+                                        return Promise.reject(new Error(`最小 1, 最大 ${systemCores.max_available}`));
+                                    }
+                                    return Promise.resolve();
+                                }
+                            }
+                        ]}
+                        extra={`系统检测到 ${systemCores.cores} 个CPU核心，建议使用 ${systemCores.max_available} 个核心进行并行处理`}
+                    >
+                        <Input
+                            type="number"
+                            min={1}
+                            max={systemCores.max_available}
+                            placeholder={`请输入处理核心数目 (1-${systemCores.max_available})`}
+                        />
+                    </Form.Item>
                     <Form.Item name="file" label="PSD/PSB文件" valuePropName="fileList" getValueFromEvent={(e: any) => {
                         if (Array.isArray(e)) return e;
                         return e?.fileList;
@@ -582,6 +630,9 @@ const ProjectList: React.FC = () => {
                                 ? `${currentProject.width} × ${currentProject.height} px`
                                 : '未设置'
                             }
+                        </Descriptions.Item>
+                        <Descriptions.Item label="处理核心数目">
+                            <Tag color="green">{currentProject.processing_cores || 1} 核心</Tag>
                         </Descriptions.Item>
                     </Descriptions>
                 ) : (

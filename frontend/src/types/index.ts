@@ -10,6 +10,7 @@ export interface Project {
   height?: number;  // PSD 文档高度
   file_size?: number; // PSD 文件大小 (bytes)
   export_scales?: string[]; // 导出倍率
+  processing_cores?: number; // 处理核心数目
 }
 
 export interface Layer {

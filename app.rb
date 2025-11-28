@@ -2,6 +2,7 @@ require 'sinatra'
 require 'sinatra/json'
 require 'rack/cors'
 require 'fileutils'
+require 'etc'
 require_relative 'lib/database'
 require_relative 'lib/models'
 require_relative 'lib/psd_processor'
@@ -11,6 +12,12 @@ require 'json'
 set :public_folder, 'public'
 set :bind, '0.0.0.0'
 set :port, 4567
+
+# System information API
+get '/api/system/cores' do
+  cores = Etc.nprocessors
+  json cores: cores, max_available: cores > 1 ? cores - 1 : 1
+end
 
 use Rack::Cors do
   allow do
@@ -44,6 +51,7 @@ post '/api/projects' do
       psd_path: File.absolute_path(target_path), # Store absolute path
       export_path: params[:export_path] || File.join(Dir.pwd, "exports", "#{Time.now.to_i}"),
       export_scales: params[:export_scales] ? JSON.parse(params[:export_scales]) : ['1x'],
+      processing_cores: params[:processing_cores] ? params[:processing_cores].to_i : 1,
       status: 'pending'
     )
     
@@ -62,12 +70,21 @@ post '/api/projects' do
 end
 
 get '/api/projects/:id' do
-  project = Project.find(params[:id])
-  json project
+  project = Project.find_by(id: params[:id])
+  if project
+    json project
+  else
+    status 404
+    json error: "Project not found"
+  end
 end
 
 post '/api/projects/:id/process' do
-  project = Project.find(params[:id])
+  project = Project.find_by(id: params[:id])
+  unless project
+    status 404
+    return json error: "Project not found"
+  end
 
   # 如果项目状态不是pending，则不允许重新处理
   if project.status != 'pending'
@@ -90,7 +107,11 @@ end
 
 # 停止处理项目
 post '/api/projects/:id/stop' do
-  project = Project.find(params[:id])
+  project = Project.find_by(id: params[:id])
+  unless project
+    status 404
+    return json error: "Project not found"
+  end
 
   # 只有正在处理中的项目才能停止
   if project.status != 'processing'
@@ -177,7 +198,11 @@ post '/internal/notify' do
 end
 
 delete '/api/projects/:id' do
-  project = Project.find(params[:id])
+  project = Project.find_by(id: params[:id])
+  unless project
+    status 404
+    return json error: "Project not found"
+  end
 
   # 根据项目状态执行不同的清理逻辑
   case project.status
@@ -247,7 +272,11 @@ end
 
 # Layers
 get '/api/projects/:id/layers' do
-  project = Project.find(params[:id])
+  project = Project.find_by(id: params[:id])
+  unless project
+    status 404
+    return json error: "Project not found"
+  end
   layers = project.layers
   
   if params[:type] && !params[:type].empty?
@@ -263,7 +292,11 @@ end
 
 # Export
 post '/api/projects/:id/export' do
-  project = Project.find(params[:id])
+  project = Project.find_by(id: params[:id])
+  unless project
+    status 404
+    return json error: "Project not found"
+  end
   data = JSON.parse(request.body.read)
   layer_ids = data['layer_ids']
   

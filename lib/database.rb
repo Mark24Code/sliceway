@@ -32,6 +32,11 @@ unless ActiveRecord::Base.connection.column_exists?(:projects, :export_scales)
   ActiveRecord::Base.connection.add_column :projects, :export_scales, :text
 end
 
+# Add processing_cores column if it doesn't exist (for existing databases)
+unless ActiveRecord::Base.connection.column_exists?(:projects, :processing_cores)
+  ActiveRecord::Base.connection.add_column :projects, :processing_cores, :integer, default: 1
+end
+
 unless ActiveRecord::Base.connection.table_exists?(:layers)
   ActiveRecord::Schema.define do
     create_table :layers do |t|

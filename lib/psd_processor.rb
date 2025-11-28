@@ -2,6 +2,7 @@ require 'psd'
 require 'fileutils'
 require 'securerandom'
 require_relative 'models'
+require_relative 'parallel_processor'
 
 class PsdProcessor
   def initialize(project_id)
@@ -14,18 +15,13 @@ class PsdProcessor
     @project.update(status: 'processing')
 
     begin
-      PSD.open(@project.psd_path) do |psd|
-        # Extract and save document dimensions
-        save_document_dimensions(psd)
-
-        # 1. Export Full Preview
-        export_full_preview(psd)
-
-        # 2. Export Slices
-        export_slices(psd)
-
-        # 3. Process Tree (Groups, Layers, Text)
-        process_node(psd.tree)
+      # 使用并行处理系统
+      if @project.processing_cores > 1
+        puts "Using parallel processing with #{@project.processing_cores} cores"
+        process_with_parallel
+      else
+        puts "Using sequential processing"
+        process_sequential
       end
 
       @project.update(status: 'ready')
@@ -37,6 +33,41 @@ class PsdProcessor
   end
 
   private
+
+  def process_with_parallel
+    # 使用并行处理器
+    parallel_processor = ParallelProcessor.new(@project.id, @project.processing_cores)
+
+    begin
+      parallel_processor.process
+
+      # 导出完整预览（仍然在主线程序列处理）
+      PSD.open(@project.psd_path) do |psd|
+        save_document_dimensions(psd)
+        export_full_preview(psd)
+      end
+
+    ensure
+      parallel_processor.stop
+    end
+  end
+
+  def process_sequential
+    # 原有的顺序处理逻辑
+    PSD.open(@project.psd_path) do |psd|
+      # Extract and save document dimensions
+      save_document_dimensions(psd)
+
+      # 1. Export Full Preview
+      export_full_preview(psd)
+
+      # 2. Export Slices
+      export_slices(psd)
+
+      # 3. Process Tree (Groups, Layers, Text)
+      process_node(psd.tree)
+    end
+  end
 
   def save_document_dimensions(psd)
     # Extract document dimensions from PSD
