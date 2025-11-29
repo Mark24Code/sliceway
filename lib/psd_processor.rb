@@ -1,4 +1,5 @@
 require 'psd'
+require 'rmagick'
 require 'fileutils'
 require 'securerandom'
 require_relative 'models'
@@ -51,7 +52,24 @@ class PsdProcessor
 
   def export_full_preview(psd)
     path = File.join(@output_dir, "full_preview.png")
-    psd.image.save_as_png(path)
+    
+    # Check if the source file is a PSB
+    if File.extname(@project.psd_path).downcase == '.psb'
+      puts "Detected PSB file, using RMagick for preview generation..."
+      begin
+        # Use RMagick to convert PSB to PNG
+        # [0] selects the flattened layer (usually the first image in the sequence for PSD/PSB)
+        image = Magick::Image.read(@project.psd_path + "[0]").first
+        image.write(path)
+      rescue => e
+        puts "Warning: RMagick failed to generate preview: #{e.message}"
+        puts "Falling back to ruby-psd (which may fail for large PSB)"
+        psd.image.save_as_png(path)
+      end
+    else
+      # Use existing logic for PSD
+      psd.image.save_as_png(path)
+    end
   end
 
   def export_slices(psd)
