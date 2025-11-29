@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Table, Button, Modal, Form, Input, Upload, message, Tag, Select, DatePicker, Space, Tooltip, Descriptions, Typography } from 'antd';
 import { InboxOutlined, PlusOutlined } from '@ant-design/icons';
+import FolderSelector from '../../components/FolderSelector';
 import { useNavigate } from 'react-router-dom';
 import { useAtom } from 'jotai';
 import { debounce } from 'lodash';
@@ -484,8 +485,23 @@ const ProjectList: React.FC = () => {
                     <Form.Item name="name" label="项目名称" rules={[{ required: true, message: '请输入项目名称' }]}>
                         <Input placeholder="请输入项目名称" />
                     </Form.Item>
-                    <Form.Item name="export_path" label="导出路径">
-                        <Input placeholder="可选：导出的绝对路径" />
+                    <Form.Item
+                      name="export_path"
+                      label="导出路径"
+                      rules={[
+                        {
+                          validator: (_, value) => {
+                            if (!value) return Promise.resolve();
+                            // 基本路径格式验证
+                            if (value.includes('..') || value.includes('//')) {
+                              return Promise.reject(new Error('路径格式不正确'));
+                            }
+                            return Promise.resolve();
+                          }
+                        }
+                      ]}
+                    >
+                        <FolderSelector placeholder="可选：选择导出文件夹或输入绝对路径" />
                     </Form.Item>
                     <Form.Item name="export_scales" label="导出倍率" initialValue={['1x']}>
                         <Select mode="multiple" placeholder="选择导出倍率">

@@ -39,10 +39,21 @@ post '/api/projects' do
       f.write(params[:file][:tempfile].read)
     end
     
+    # 处理导出路径：如果是相对路径，转换为绝对路径
+    export_path = if params[:export_path]
+      if params[:export_path].start_with?('/')
+        params[:export_path] # 已经是绝对路径
+      else
+        File.join(Dir.pwd, params[:export_path]) # 相对路径转绝对路径
+      end
+    else
+      File.join(Dir.pwd, "exports", "#{Time.now.to_i}") # 默认路径
+    end
+
     project = Project.create!(
       name: params[:name] || filename,
       psd_path: File.absolute_path(target_path), # Store absolute path
-      export_path: params[:export_path] || File.join(Dir.pwd, "exports", "#{Time.now.to_i}"),
+      export_path: export_path,
       export_scales: params[:export_scales] ? JSON.parse(params[:export_scales]) : ['1x'],
       status: 'pending'
     )
