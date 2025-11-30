@@ -44,7 +44,7 @@ post '/api/projects' do
     File.open(target_path, 'wb') do |f|
       f.write(params[:file][:tempfile].read)
     end
-    
+
     # 处理导出路径：如果是相对路径，转换为绝对路径
     export_path = if params[:export_path]
       if params[:export_path].start_with?('/')
@@ -63,14 +63,14 @@ post '/api/projects' do
       export_scales: params[:export_scales] ? JSON.parse(params[:export_scales]) : ['1x'],
       status: 'pending'
     )
-    
+
     # Trigger processing in a separate process
     pid = spawn("bundle exec ruby bin/process_psd #{project.id}")
     Process.detach(pid) # Avoid zombie processes
 
     # 保存任务PID到全局变量
     $running_tasks[project.id] = pid
-    
+
     json project
   else
     status 400
@@ -156,6 +156,39 @@ post '/api/projects/:id/stop' do
   json success: true
 end
 
+# System
+get '/api/system/directories' do
+  current_path = params[:path] || Dir.pwd
+
+  # Security check: prevent going above root (though for this tool we might want full access)
+  # For now, we trust the user as this is a local tool.
+
+  begin
+    # Normalize path
+    current_path = File.absolute_path(current_path)
+
+    # Get parent path
+    parent_path = File.dirname(current_path)
+
+    # List directories
+    entries = Dir.entries(current_path).select do |entry|
+      next false if entry == '.' || entry == '..'
+      path = File.join(current_path, entry)
+      File.directory?(path) && File.readable?(path)
+    end.sort
+
+    json({
+      current_path: current_path,
+      parent_path: parent_path,
+      directories: entries,
+      sep: File::SEPARATOR
+    })
+  rescue => e
+    status 500
+    json error: "Failed to list directories: #{e.message}"
+  end
+end
+
 # 全局变量来跟踪正在运行的任务
 $running_tasks = {}
 
@@ -185,11 +218,11 @@ post '/internal/notify' do
   data = JSON.parse(request.body.read)
   project_id = data['project_id']
   status = data['status']
-  
+
   # Broadcast to all connected clients
   message = { type: 'status_update', project_id: project_id, status: status }.to_json
   $ws_clients.each { |ws| ws.send(message) }
-  
+
   json success: true
 end
 
@@ -266,15 +299,15 @@ end
 get '/api/projects/:id/layers' do
   project = Project.find(params[:id])
   layers = project.layers
-  
+
   if params[:type] && !params[:type].empty?
     layers = layers.where(layer_type: params[:type])
   end
-  
+
   if params[:q] && !params[:q].empty?
     layers = layers.where("name LIKE ?", "%#{params[:q]}%")
   end
-  
+
   json layers
 end
 
@@ -283,26 +316,26 @@ post '/api/projects/:id/export' do
   project = Project.find(params[:id])
   data = JSON.parse(request.body.read)
   layer_ids = data['layer_ids']
-  
+
   layers = project.layers.where(id: layer_ids)
   export_count = 0
-  
+
   FileUtils.mkdir_p(project.export_path)
-  
+
   requested_scales = data['scales'] || ['1x']
-  
+
   layers.each do |layer|
     next unless layer.image_path
-    
+
     # Get base path and extension
     # image_path is like "processed/1/layer_123.png"
     # We need to find variants like "processed/1/layer_123@2x.png"
-    
+
     base_source = File.join("public", layer.image_path)
     ext = File.extname(base_source)
     base_name_without_ext = File.basename(base_source, ext)
     dir_name = File.dirname(base_source)
-    
+
     requested_scales.each do |scale|
       # Determine source filename for this scale
       if scale == '1x'
@@ -312,16 +345,16 @@ post '/api/projects/:id/export' do
         source = File.join(dir_name, "#{base_name_without_ext}@#{scale}#{ext}")
         target_suffix = "@#{scale}"
       end
-      
+
       # Determine target filename
       target = File.join(project.export_path, "#{layer.name}_#{layer.id}#{target_suffix}#{ext}")
-      
+
       if File.exist?(source)
         FileUtils.cp(source, target)
         export_count += 1
       end
     end
   end
-  
+
   json success: true, count: export_count, path: project.export_path
 end
