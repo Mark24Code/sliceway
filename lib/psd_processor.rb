@@ -4,34 +4,74 @@ require 'fileutils'
 require 'securerandom'
 require_relative 'models'
 
+# 性能监控类
+class PerformanceMonitor
+  def self.measure(operation_name)
+    start_time = Time.now
+    start_memory = memory_usage
+
+    result = yield
+
+    end_time = Time.now
+    end_memory = memory_usage
+
+    duration = end_time - start_time
+    memory_delta = end_memory - start_memory
+
+    puts "性能监控: #{operation_name} - 耗时: #{duration.round(2)}秒, 内存变化: #{memory_delta} MB"
+
+    { time: duration, memory_delta: memory_delta, result: result }
+  end
+
+  def self.memory_usage
+    `ps -o rss= -p #{Process.pid}`.to_i / 1024
+  rescue
+    0 # 如果无法获取内存使用情况，返回0
+  end
+end
+
 class PsdProcessor
   def initialize(project_id)
     @project = Project.find(project_id)
     @output_dir = File.join("public", "processed", @project.id.to_s)
     FileUtils.mkdir_p(@output_dir)
+    @processed_children = 0 # 用于跟踪处理的子节点数量
+  end
+
+  # 强制垃圾回收并记录内存使用情况
+  def force_gc_after_large_operation(operation_name)
+    puts "在 #{operation_name} 后强制垃圾回收"
+    GC.start
+    memory_usage = PerformanceMonitor.memory_usage
+    puts "#{operation_name} 后内存使用: #{memory_usage} MB"
   end
 
   def call
     @project.update(status: 'processing')
 
     begin
-      PSD.open(@project.psd_path) do |psd|
-        # Extract and save document dimensions
-        save_document_dimensions(psd)
+      PerformanceMonitor.measure("完整PSD处理") do
+        PSD.open(@project.psd_path) do |psd|
+          # 提取并保存文档尺寸
+          save_document_dimensions(psd)
 
-        # 1. Export Full Preview
-        export_full_preview(psd)
+          # 1. 导出完整预览
+          export_full_preview(psd)
+          force_gc_after_large_operation("完整预览导出")
 
-        # 2. Export Slices
-        export_slices(psd)
+          # 2. 导出切片
+          export_slices(psd)
+          force_gc_after_large_operation("切片导出")
 
-        # 3. Process Tree (Groups, Layers, Text)
-        process_node(psd.tree)
+          # 3. 处理树结构（组、图层、文本）
+          process_node(psd.tree)
+          force_gc_after_large_operation("树结构处理")
+        end
       end
 
       @project.update(status: 'ready')
     rescue => e
-      puts "Error processing PSD: #{e.message}"
+      puts "处理PSD时出错: #{e.message}"
       puts e.backtrace
       @project.update(status: 'error')
     end
@@ -73,56 +113,97 @@ class PsdProcessor
   end
 
   def export_slices(psd)
-    psd.slices.each do |slice|
-      # Skip slices with width=0 or height=0
-      if slice.width == 0 || slice.height == 0
-        puts "Skipping slice #{slice.name} with dimensions #{slice.width}x#{slice.height}"
-        next
+    slices = psd.slices.to_a
+
+    # 如果没有切片，直接返回
+    return if slices.empty?
+
+    puts "开始处理 #{slices.length} 个切片"
+
+    # 根据切片数量决定是否使用并行处理
+    if slices.length > 3
+      export_slices_parallel(slices)
+    else
+      export_slices_sequential(slices)
+    end
+  end
+
+  # 并行处理切片
+  def export_slices_parallel(slices)
+    puts "使用并行处理切片"
+
+    # 分批处理以控制内存使用和并发度
+    slices.each_slice(3) do |slice_batch|
+      threads = slice_batch.map do |slice|
+        Thread.new { process_slice(slice) }
       end
 
-      filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
+      # 等待当前批次的所有线程完成
+      threads.each(&:join)
 
-      begin
-        png = slice.to_png
-        next unless png
+      # 批次处理完成后强制垃圾回收
+      force_gc_after_large_operation("切片批次处理")
+    end
+  end
 
-        saved_path = save_scaled_images(png, filename)
+  # 顺序处理切片
+  def export_slices_sequential(slices)
+    puts "使用顺序处理切片"
+    slices.each do |slice|
+      process_slice(slice)
+    end
+  end
 
-        Layer.create!(
-          project_id: @project.id,
-          resource_id: slice.id.to_s,
-          name: slice.name,
-          layer_type: 'slice',
-          x: slice.left,
-          y: slice.top,
-          width: slice.width,
-          height: slice.height,
-          image_path: saved_path,
-          metadata: { scales: @project.export_scales || ['1x'] }
-        )
-      rescue => e
-        puts "Failed to export slice #{slice.name}: #{e.message}"
-        puts e.backtrace if e.message.include?('nil')
-      end
+  # 处理单个切片
+  def process_slice(slice)
+    # 跳过宽度或高度为0的切片
+    if slice.width == 0 || slice.height == 0
+      puts "跳过切片 #{slice.name}，尺寸为 #{slice.width}x#{slice.height}"
+      return
+    end
+
+    filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
+
+    begin
+      png = slice.to_png
+      return unless png
+
+      saved_path = save_scaled_images(png, filename)
+
+      Layer.create!(
+        project_id: @project.id,
+        resource_id: slice.id.to_s,
+        name: slice.name,
+        layer_type: 'slice',
+        x: slice.left,
+        y: slice.top,
+        width: slice.width,
+        height: slice.height,
+        image_path: saved_path,
+        metadata: { scales: @project.export_scales || ['1x'] }
+      )
+    rescue => e
+      puts "导出切片 #{slice.name} 失败: #{e.message}"
+      puts e.backtrace if e.message.include?('nil')
     end
   end
 
   def process_node(node, parent_id = nil)
-    # Skip root node itself if it's just the container, but we need its children
+    # 跳过根节点本身，但处理其子节点
     if node.root?
       node.children.each { |child| process_node(child, parent_id) }
       return
     end
 
-    # Skip nodes with width=0 or height=0
+    # 跳过宽度或高度为0的节点
     if node.width == 0 || node.height == 0
-      puts "Skipping node #{node.name} with dimensions #{node.width}x#{node.height}"
+      puts "跳过节点 #{node.name}，尺寸为 #{node.width}x#{node.height}"
       return
     end
 
     layer_type = determine_type(node)
 
-    # Prepare record attributes
+    # 准备记录属性
     attrs = {
       project_id: @project.id,
       name: node.name,
@@ -135,7 +216,7 @@ class PsdProcessor
       metadata: { scales: @project.export_scales || ['1x'] }
     }
 
-    # Handle specific types
+    # 处理特定类型
     if layer_type == 'group'
       handle_group(node, attrs)
     elsif layer_type == 'text'
@@ -144,12 +225,19 @@ class PsdProcessor
       handle_layer(node, attrs)
     end
 
-    # Save record
+    # 保存记录
     record = Layer.create!(attrs)
 
-    # Recurse if group
+    # 如果是组，递归处理子节点
     if node.group?
-      node.children.each { |child| process_node(child, record.id) }
+      node.children.each do |child|
+        process_node(child, record.id)
+        # 每处理10个子节点后强制垃圾回收
+        @processed_children += 1
+        if @processed_children % 10 == 0
+          force_gc_after_large_operation("处理#{@processed_children}个子节点")
+        end
+      end
     end
   end
 
@@ -247,7 +335,7 @@ class PsdProcessor
 
     # 添加图像数据验证
     unless png.respond_to?(:save) && png.respond_to?(:width) && png.respond_to?(:height)
-      puts "Warning: Invalid PNG data for #{base_filename}"
+      puts "警告: #{base_filename} 的PNG数据无效"
       return nil
     end
 
@@ -257,33 +345,49 @@ class PsdProcessor
     base_name = File.basename(base_filename, ".*")
     ext = File.extname(base_filename)
 
-    scales.each do |scale|
-      begin
-        if scale == '1x'
-          path = File.join(@output_dir, base_filename)
-          png.save(path, :fast_rgba)
-          saved_base_path = relative_path(base_filename)
-        else
-          # Calculate new dimensions
-          factor = scale.to_i
-          new_width = png.width * factor
-          new_height = png.height * factor
+    PerformanceMonitor.measure("图像缩放处理: #{base_filename}") do
+      scales.each do |scale|
+        begin
+          if scale == '1x'
+            path = File.join(@output_dir, base_filename)
+            png.save(path, :fast_rgba)
+            saved_base_path = relative_path(base_filename)
 
-          # Resize using ChunkyPNG
-          # Note: psd.to_png returns a ChunkyPNG::Image
-          resized_png = png.resample_nearest_neighbor(new_width, new_height)
+            # 如果有多个缩放比例，释放原始PNG以节省内存
+            if scales.length > 1
+              png = nil  # 释放原始图像对象
+            end
+          else
+            # 如果需要缩放但原始PNG已释放，从磁盘重新加载
+            if png.nil?
+              original_path = File.join(@output_dir, base_filename)
+              png = ChunkyPNG::Image.from_file(original_path)
+            end
 
-          filename = "#{base_name}@#{scale}#{ext}"
-          path = File.join(@output_dir, filename)
-          resized_png.save(path, :fast_rgba)
+            # 计算新尺寸
+            factor = scale.to_i
+            new_width = png.width * factor
+            new_height = png.height * factor
 
-          # If 1x is not requested, we still need a base path for preview
-          # Use the first generated scale as the "base" path if not set
-          saved_base_path ||= relative_path(filename)
+            # 使用ChunkyPNG调整大小
+            # 注意: psd.to_png返回ChunkyPNG::Image
+            resized_png = png.resample_nearest_neighbor(new_width, new_height)
+
+            filename = "#{base_name}@#{scale}#{ext}"
+            path = File.join(@output_dir, filename)
+            resized_png.save(path, :fast_rgba)
+
+            # 立即释放缩放后的图像对象
+            resized_png = nil
+
+            # 如果未请求1x，我们仍需要基本路径用于预览
+            # 如果未设置，使用第一个生成的缩放比例作为"基本"路径
+            saved_base_path ||= relative_path(filename)
+          end
+        rescue => e
+          puts "保存缩放图像 #{base_filename} 在比例 #{scale} 时出错: #{e.message}"
+          # 继续处理其他比例
         end
-      rescue => e
-        puts "Error saving scaled image #{base_filename} at scale #{scale}: #{e.message}"
-        # 继续处理其他倍率
       end
     end
 
