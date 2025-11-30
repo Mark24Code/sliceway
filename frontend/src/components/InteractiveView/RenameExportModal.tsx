@@ -43,7 +43,20 @@ const RenameExportModal: React.FC<RenameExportModalProps> = ({
   };
 
   const handleOk = () => {
-    onConfirm(renames, clearDirectory);
+    if (clearDirectory) {
+      Modal.confirm({
+        title: '确认清空目录？',
+        content: '此操作将删除导出目录下的所有文件，且不可恢复。确定要继续吗？',
+        okText: '确定清空并导出',
+        cancelText: '取消',
+        okType: 'danger',
+        onOk: () => {
+          onConfirm(renames, clearDirectory);
+        }
+      });
+    } else {
+      onConfirm(renames, clearDirectory);
+    }
   };
 
   return (
