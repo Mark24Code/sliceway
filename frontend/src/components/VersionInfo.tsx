@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tag, Space, Typography, Tooltip } from 'antd';
+import { Space, Typography, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import client from '../api/client';
 
@@ -13,18 +13,14 @@ interface VersionInfo {
 
 const VersionInfo: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchVersion = async () => {
-      setLoading(true);
       try {
         const response = await client.get('/version');
         setVersionInfo(response.data);
       } catch (error) {
         console.error('Failed to fetch version info:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
