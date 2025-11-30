@@ -1,5 +1,5 @@
 services:
-  backend:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,29 +10,11 @@ services:
       - ./data/public:/app/public
       - ./data/db:/app/db
       - ./data/exports:/app/exports
-      # Mount source code for development (optional, but good for hot reload if needed)
-      # - .:/app
     environment:
       - UPLOADS_PATH=/app/uploads
       - PUBLIC_PATH=/app/public
+      - STATIC_PATH=/app/dist
       - DB_PATH=/app/db/production.sqlite3
       - EXPORTS_PATH=/app/exports
       - RACK_ENV=production
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "5173:4173"
-    volumes:
-      # Mount source code for hot reloading - REMOVED for production build
-      # - ./frontend:/app
-      # Avoid overwriting node_modules with local one if platform differs
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:4567
-    depends_on:
-      - backend
     restart: unless-stopped

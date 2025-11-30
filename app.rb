@@ -19,6 +19,11 @@ use Rack::Cors do
   end
 end
 
+# Serve frontend static assets (JS/CSS) from STATIC_PATH
+# This allows us to separate built assets from user-generated content
+static_path = ENV['STATIC_PATH'] || 'dist'
+use Rack::Static, :urls => ["/assets"], :root => static_path
+
 # Projects
 get '/api/projects' do
   page = (params[:page] || 1).to_i

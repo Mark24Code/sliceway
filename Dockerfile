@@ -1,12 +1,16 @@
-# User requested ruby 3.4.7, but it's not available yet. Using latest stable 3.3-alpine.
+# Stage 1: Build Frontend
+FROM node:22-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install
+COPY frontend/ .
+# Build for production
+RUN npm run build
+
+# Stage 2: Setup Backend & Serve
 FROM ruby:3.3-alpine
 
 # Install dependencies
-# imagemagick: for RMagick
-# sqlite-dev: for sqlite3 gem
-# build-base: for compiling native extensions
-# tzdata: for timezones
-# git: for bundler if needed
 RUN apk add --no-cache \
     imagemagick \
     imagemagick-dev \
@@ -28,11 +32,20 @@ RUN bundle config set --local without 'development test' && \
 # Copy application code
 COPY . .
 
+# Copy built frontend assets from builder stage
+# We copy them to 'dist' so we can separate them from the mutable 'public' folder
+COPY --from=frontend-builder /app/frontend/dist ./dist
+
+# Create public directory for processed images
+RUN mkdir -p public
+
 # Expose port
 EXPOSE 4567
 
 # Environment variables
 ENV RACK_ENV=production
+ENV PUBLIC_PATH=/app/public
+ENV STATIC_PATH=/app/dist
 
 # Start command
 # Run with Puma, 5 threads min/max, port 4567, production environment

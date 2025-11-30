@@ -1,6 +1,6 @@
 # Running Sliceway with Docker
 
-This project is configured to run with Docker and Docker Compose.
+This project runs as a single container application. The frontend is built and served by the Ruby backend.
 
 ## Prerequisites
 
@@ -15,22 +15,21 @@ This project is configured to run with Docker and Docker Compose.
     ```
 
 2.  Access the application:
-    - Frontend: [http://localhost:5173](http://localhost:5173)
-    - Backend API: [http://localhost:4567](http://localhost:4567)
+    - URL: [http://localhost:4567](http://localhost:4567)
 
 ## Configuration
 
 The application uses the following volumes mapped to your local `data/` directory:
 
 - `data/uploads`: Uploaded PSD files.
-- `data/public`: Processed image assets.
+- `data/public`: Processed image assets (persisted).
 - `data/db`: SQLite database file.
 - `data/exports`: Exported files.
 
 ## Environment
 
-- **Backend**: Ruby 3.3 (Alpine), Puma (5 threads), Production Mode.
-- **Frontend**: Node.js 22 (Alpine), Vite Preview (Production Build).
+- **Container**: Ruby 3.3 (Alpine) + Built Frontend Assets.
+- **Server**: Puma (5 threads), Production Mode.
 
 ## Stopping
 
