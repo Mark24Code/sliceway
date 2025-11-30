@@ -60,8 +60,13 @@ body {
     height: 2px;
     background-color: red;
     z-index: 200; // 确保在图片上方
-    pointer-events: none;
     margin-top: -1px; // 精确居中
+    box-shadow:
+        0 0 10px #ff0000,
+        0 0 20px #ff0000,
+        0 0 30px #ff0000;
+    pointer-events: none;
+    filter: blur(1px);
   }
 
 
