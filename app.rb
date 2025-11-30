@@ -8,7 +8,6 @@ require_relative 'lib/psd_processor'
 require 'faye/websocket'
 require 'json'
 
-set :public_folder, ENV['PUBLIC_PATH'] || 'public'
 set :bind, '0.0.0.0'
 set :port, 4567
 
@@ -24,10 +23,51 @@ use Rack::Cors do
   end
 end
 
-# Serve frontend static assets (JS/CSS) from STATIC_PATH
-# Frontend build output is in /app/dist (separate from user data)
+# Environment-aware static file serving configuration
+# 环境感知的静态文件服务配置
 static_path = ENV['STATIC_PATH'] || 'dist'
-use Rack::Static, :urls => ["/assets"], :root => static_path
+
+# Detect environment - production in Docker, development otherwise
+# 检测环境 - Docker中为生产环境，其他情况为开发环境
+production_env = ENV['RACK_ENV'] == 'production' || File.exist?('/.dockerenv')
+
+# Serve processed files from PUBLIC_PATH via /processed path in both environments
+# 在两种环境中都通过/processed路径从PUBLIC_PATH服务处理后的文件
+public_path = ENV['PUBLIC_PATH'] || 'public'
+
+# Custom route for processed files
+# 为processed文件添加自定义路由
+get '/processed/*' do
+  filename = params[:splat].first
+  file_path = File.join(File.expand_path(public_path), 'processed', filename)
+
+  puts "DEBUG: Looking for processed file: #{file_path}"
+  puts "DEBUG: File exists: #{File.exist?(file_path)}"
+
+  if File.exist?(file_path)
+    send_file file_path
+  else
+    status 404
+    "File not found: #{file_path}"
+  end
+end
+
+if production_env
+  # Production environment (Docker): Serve static files from multiple sources
+  # 生产环境(Docker): 从多个来源服务静态文件
+
+  # Serve frontend assets from STATIC_PATH
+  # 从STATIC_PATH服务前端资源
+  set :public_folder, static_path
+else
+  # Development environment: Keep frontend-backend separation
+  # 开发环境: 保持前后端分离
+  set :public_folder, ENV['PUBLIC_PATH'] || 'public'
+
+  # Serve frontend static assets (JS/CSS) from STATIC_PATH via /assets path
+  # 通过/assets路径从STATIC_PATH服务前端静态资源(JS/CSS)
+  use Rack::Static, :urls => ["/assets"], :root => static_path
+end
 
 # SPA Catch-all route
 # Must be last to avoid overriding API routes

@@ -204,3 +204,8 @@ rm -rf sliceway-data/
 - `STATIC_PATH=/app/dist` - 前端静态资源路径（构建时打包）
 - `DB_PATH=/data/db/production.sqlite3` - 数据库文件路径
 - `EXPORTS_PATH=/data/exports` - 导出文件路径
+
+
+## example
+
+`DATA_VOLUME=/Users/mark24/Downloads/export ./start_docker.sh`
