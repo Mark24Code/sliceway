@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Tabs, Card, Checkbox, Button, message, Select, Space } from 'antd';
+import { Tabs, Card, Checkbox, Button, message, Select, Space, Input } from 'antd';
 import { useAtom } from 'jotai';
 import ExportConfigButton from '../ExportConfigButton';
 import { debounce } from 'lodash';
@@ -20,6 +20,7 @@ const FilterList: React.FC = () => {
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
+    const [nameFilter, setNameFilter] = useState('');
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Filter logic based on Scanner Position
@@ -38,6 +39,12 @@ const FilterList: React.FC = () => {
 
     const filteredLayers = useMemo(() => {
         let list = visibleLayers;
+
+        // 名称筛选
+        if (nameFilter) {
+            const lowerName = nameFilter.toLowerCase();
+            list = list.filter(l => l.name.toLowerCase().includes(lowerName));
+        }
 
         // 类型筛选
         if (typeFilter.length > 0) {
@@ -81,7 +88,7 @@ const FilterList: React.FC = () => {
             list = list.filter(l => l.layer_type === 'group' || l.layer_type === 'text'); // Groups might have text
         }
         return list;
-    }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, activeTab]);
+    }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, activeTab, nameFilter]);
 
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
 
@@ -141,13 +148,22 @@ const FilterList: React.FC = () => {
             <div className="header">
                 <Space wrap style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
+                         <Input
+                            placeholder="搜索图层名称"
+                            value={nameFilter}
+                            onChange={e => setNameFilter(e.target.value)}
+                            style={{ width: 150 }}
+                            allowClear
+                        />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
                         {/* <span style={{ marginRight: 8 }}>类型:</span> */}
                         <Select
                             mode="multiple"
                             placeholder="选择图层类型"
                             value={typeFilter}
                             onChange={setTypeFilter}
-                            style={{ width: 200 }}
+                            style={{ width: 150 }}
                             allowClear
                         >
                             <Select.Option value="slice">切片</Select.Option>
@@ -163,7 +179,7 @@ const FilterList: React.FC = () => {
                             placeholder="选择尺寸范围"
                             value={sizeFilter}
                             onChange={setSizeFilter}
-                            style={{ width: 200 }}
+                            style={{ width: 150 }}
                             allowClear
                         >
                             <Select.Option value="small">小 (0-100px)</Select.Option>
@@ -178,7 +194,7 @@ const FilterList: React.FC = () => {
                             placeholder="选择比例类型"
                             value={ratioFilter}
                             onChange={setRatioFilter}
-                            style={{ width: 200 }}
+                            style={{ width: 150 }}
                             allowClear
                         >
                             <Select.Option value="square">正方形</Select.Option>
