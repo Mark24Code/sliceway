@@ -33,7 +33,8 @@ end
 class PsdProcessor
   def initialize(project_id)
     @project = Project.find(project_id)
-    @output_dir = File.join("public", "processed", @project.id.to_s)
+    public_path = ENV['PUBLIC_PATH'] || 'public'
+    @output_dir = File.join(public_path, "processed", @project.id.to_s)
     FileUtils.mkdir_p(@output_dir)
     @processed_children = 0 # 用于跟踪处理的子节点数量
   end
@@ -92,7 +93,7 @@ class PsdProcessor
 
   def export_full_preview(psd)
     path = File.join(@output_dir, "full_preview.png")
-    
+
     # Check if the source file is a PSB
     if File.extname(@project.psd_path).downcase == '.psb'
       puts "Detected PSB file, using RMagick for preview generation..."
@@ -329,7 +330,7 @@ class PsdProcessor
   def relative_path(filename)
     File.join("processed", @project.id.to_s, filename)
   end
-  
+
   def save_scaled_images(png, base_filename)
     return nil unless png
 

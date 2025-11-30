@@ -12,6 +12,11 @@ set :public_folder, ENV['PUBLIC_PATH'] || 'public'
 set :bind, '0.0.0.0'
 set :port, 4567
 
+# Helper method to get public path
+def public_path
+  ENV['PUBLIC_PATH'] || 'public'
+end
+
 use Rack::Cors do
   allow do
     origins '*'
@@ -20,7 +25,7 @@ use Rack::Cors do
 end
 
 # Serve frontend static assets (JS/CSS) from STATIC_PATH
-# This allows us to separate built assets from user-generated content
+# Frontend build output is in /app/dist (separate from user data)
 static_path = ENV['STATIC_PATH'] || 'dist'
 use Rack::Static, :urls => ["/assets"], :root => static_path
 
@@ -33,8 +38,9 @@ end
 
 get '*' do
   pass if request.path_info.start_with?('/api')
+  pass if request.path_info.start_with?('/processed')
 
-  # Serve index.html for SPA routing from STATIC_PATH
+  # Serve index.html for SPA routing
   static_path = ENV['STATIC_PATH'] || 'dist'
   send_file File.join(static_path, 'index.html')
 end
@@ -150,14 +156,15 @@ post '/api/projects/:id/stop' do
   # 清理已生成的文件
   begin
     # Clean up exported images in public directory
+    public_path = ENV['PUBLIC_PATH'] || 'public'
     project.layers.each do |layer|
-      if layer.image_path && File.exist?(File.join('public', layer.image_path))
-        FileUtils.rm_rf(File.join('public', layer.image_path))
+      if layer.image_path && File.exist?(File.join(public_path, layer.image_path))
+        FileUtils.rm_rf(File.join(public_path, layer.image_path))
       end
     end
 
     # Clean up processed images directory
-    processed_dir = File.join('public', 'processed', project.id.to_s)
+    processed_dir = File.join(public_path, 'processed', project.id.to_s)
     if Dir.exist?(processed_dir)
       FileUtils.rm_rf(processed_dir)
     end
@@ -289,15 +296,16 @@ delete '/api/projects/:id' do
     end
 
     # Clean up exported images in public directory
+    public_path = ENV['PUBLIC_PATH'] || 'public'
     project.layers.each do |layer|
-      if layer.image_path && File.exist?(File.join('public', layer.image_path))
-        FileUtils.rm_rf(File.join('public', layer.image_path))
+      if layer.image_path && File.exist?(File.join(public_path, layer.image_path))
+        FileUtils.rm_rf(File.join(public_path, layer.image_path))
         puts "已清理图层图片: #{layer.image_path}"
       end
     end
 
     # Clean up processed images directory
-    processed_dir = File.join('public', 'processed', project.id.to_s)
+    processed_dir = File.join(public_path, 'processed', project.id.to_s)
     if Dir.exist?(processed_dir)
       FileUtils.rm_rf(processed_dir)
       puts "已清理处理图片目录: #{processed_dir}"
@@ -363,7 +371,8 @@ post '/api/projects/:id/export' do
     # image_path is like "processed/1/layer_123.png"
     # We need to find variants like "processed/1/layer_123@2x.png"
 
-    base_source = File.join("public", layer.image_path)
+    public_path = ENV['PUBLIC_PATH'] || 'public'
+    base_source = File.join(public_path, layer.image_path)
     ext = File.extname(base_source)
     base_name_without_ext = File.basename(base_source, ext)
     dir_name = File.dirname(base_source)

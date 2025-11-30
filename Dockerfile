@@ -33,20 +33,25 @@ RUN bundle config set --local without 'development test' && \
 COPY . .
 
 # Copy built frontend assets from builder stage
-# We copy them to 'dist' so we can separate them from the mutable 'public' folder
+# Store in /app/dist separate from user data
 COPY --from=frontend-builder /app/frontend/dist ./dist
 
-# Create public directory for processed images
-RUN mkdir -p public
+# Create necessary directories for volume mounts
+RUN mkdir -p /data/uploads \
+    /data/public/processed \
+    /data/db \
+    /data/exports
 
 # Expose port
 EXPOSE 4567
 
 # Environment variables
 ENV RACK_ENV=production
-ENV PUBLIC_PATH=/app/public
+ENV UPLOADS_PATH=/data/uploads
+ENV PUBLIC_PATH=/data/public
+ENV DB_PATH=/data/db/production.sqlite3
+ENV EXPORTS_PATH=/data/exports
 ENV STATIC_PATH=/app/dist
 
 # Start command
-# Run with Puma, 5 threads min/max, port 4567, production environment
-CMD ["bundle", "exec", "puma", "-t", "5:5", "-p", "4567", "-e", "production"]
+CMD ["sh", "-c", "bundle exec rake db:migrate && bundle exec puma -t 5:5 -p 4567 -e production"]

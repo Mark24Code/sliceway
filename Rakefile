@@ -6,13 +6,40 @@ require 'fileutils'
 require 'sqlite3'
 require 'active_record'
 
-# 项目配置
-DATABASE_PATH = 'db/development.sqlite3'
-UPLOADS_DIR = 'uploads'
-EXPORTS_DIR = 'exports'
-PUBLIC_DIR = 'public'
+# 项目配置 - 从环境变量获取，支持生产环境
+DATABASE_PATH = ENV['DB_PATH'] || 'db/development.sqlite3'
+UPLOADS_DIR = ENV['UPLOADS_PATH'] || 'uploads'
+EXPORTS_DIR = ENV['EXPORTS_PATH'] || 'exports'
+PUBLIC_DIR = ENV['PUBLIC_PATH'] || 'public'
 
 namespace :db do
+  desc "运行数据库迁移（生产环境安全）"
+  task :migrate do
+    puts "=== Sliceway 数据库迁移 ==="
+    puts "数据库路径: #{DATABASE_PATH}"
+    puts ""
+
+    # 确保数据库目录存在
+    db_dir = File.dirname(DATABASE_PATH)
+    FileUtils.mkdir_p(db_dir) unless Dir.exist?(db_dir)
+
+    # 确保必要的目录存在
+    [UPLOADS_DIR, EXPORTS_DIR, PUBLIC_DIR].each do |dir|
+      FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+    end
+
+    # 创建 processed 子目录
+    processed_dir = File.join(PUBLIC_DIR, 'processed')
+    FileUtils.mkdir_p(processed_dir) unless Dir.exist?(processed_dir)
+
+    puts "✅ 目录结构已准备"
+
+    # 加载数据库配置（会自动创建表）
+    require_relative 'lib/database'
+
+    puts "✅ 数据库迁移完成"
+  end
+
   desc "初始化数据库结构"
   task :init do
     puts "=== Sliceway 数据库初始化 ==="

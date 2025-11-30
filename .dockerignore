@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+.github
+
+# Docker
+docker-compose.yml
+.dockerignore
+
+# Data directories (should be mounted as volumes)
+data/
+sliceway-data/
+uploads/
+exports/
+db/*.sqlite3
+public/processed/
+
+# Development files
+.vscode/
+.idea/
+
+# Documentation
+*.md
+!README.md
+walkthrough.md
+Functions.md
+TODO.md
+
+# Node modules (will be installed during build)
+frontend/node_modules/
+node_modules/
+
+# Frontend build output (will be generated)
+frontend/dist/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local

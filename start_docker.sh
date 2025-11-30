@@ -5,20 +5,43 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Ensure data directories exist（仅在未自定义挂载时创建本地目录）
-mkdir -p data/uploads
-mkdir -p data/public
-mkdir -p data/db
-mkdir -p data/exports
+# 设置默认数据卷路径
+DATA_VOLUME="${DATA_VOLUME:-./sliceway-data}"
 
-# Build and start containers
-echo "Starting Sliceway (Single Container) with Docker..."
-echo "可通过环境变量自定义挂载卷路径："
-echo "  UPLOADS_VOLUME PUBLIC_VOLUME DB_VOLUME EXPORTS_VOLUME"
-echo "示例：UPLOADS_VOLUME=/your/path/uploads ./start_docker.sh"
-docker-compose up --build -d
+# 创建数据卷目录结构
+echo "初始化数据目录: $DATA_VOLUME"
+mkdir -p "$DATA_VOLUME/uploads"
+mkdir -p "$DATA_VOLUME/public/processed"
+mkdir -p "$DATA_VOLUME/db"
+mkdir -p "$DATA_VOLUME/exports"
+
+# 构建镜像
+echo "构建 Sliceway Docker 镜像..."
+docker build -t sliceway:latest .
+
+# 停止并删除旧容器（如果存在）
+docker stop sliceway 2>/dev/null && docker rm sliceway 2>/dev/null
+
+# 启动新容器
+echo "启动 Sliceway 容器..."
+docker run -d \
+  --name sliceway \
+  -p 4567:4567 \
+  -v "$(cd "$DATA_VOLUME" && pwd)":/data \
+  --restart unless-stopped \
+  sliceway:latest
 
 echo "-----------------------------------"
-echo "App running at http://localhost:4567"
+echo "✅ Sliceway 已启动"
+echo "📂 数据目录: $DATA_VOLUME"
+echo "🌐 访问地址: http://localhost:4567"
 echo "-----------------------------------"
-echo "To stop: docker-compose down"
+echo ""
+echo "使用说明："
+echo "  查看日志: docker logs -f sliceway"
+echo "  停止服务: docker stop sliceway"
+echo "  启动服务: docker start sliceway"
+echo "  删除容器: docker rm -f sliceway"
+echo ""
+echo "自定义数据目录："
+echo "  DATA_VOLUME=/your/custom/path ./start_docker.sh"
