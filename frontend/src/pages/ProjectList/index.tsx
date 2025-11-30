@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Table, Button, Modal, Form, Input, Upload, message, Tag, Select, DatePicker, Space, Tooltip, Descriptions, Typography } from 'antd';
-import { InboxOutlined, PlusOutlined } from '@ant-design/icons';
+import { InboxOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import FolderSelector from '../../components/FolderSelector';
 import { useNavigate } from 'react-router-dom';
 import { useAtom } from 'jotai';
@@ -424,6 +424,12 @@ const ProjectList: React.FC = () => {
             <div className="project-list__header">
                 <h1 className="project-list__header-title">项目列表</h1>
                 <div className="project-list__header-actions">
+                    <Button
+                        icon={<QuestionCircleOutlined />}
+                        onClick={() => navigate('/about')}
+                    >
+                        关于 & 帮助
+                    </Button>
                     <Button
                         danger
                         disabled={selectedRowKeys.length === 0}

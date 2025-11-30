@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
+import About from './pages/About';
 import GlobalLoading from './components/GlobalLoading';
 import InteractiveView from './components/InteractiveView/InteractiveView';
 import FullListView from './components/ListView/FullListView';
@@ -20,6 +21,7 @@ const App: React.FC = () => {
             <Route path="interactive" element={<InteractiveView />} />
             <Route path="list" element={<FullListView />} />
           </Route>
+          <Route path="/about" element={<About />} />
         </Routes>
       </Router>
       <GlobalLoading />

@@ -1,0 +1,151 @@
+.about-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+
+    &__header {
+        text-align: center;
+        margin-bottom: 40px;
+        padding: 40px 0;
+        background: #FFD100;
+        border-radius: 12px;
+        color: #333;
+
+        .about-page__title {
+            color: #333 !important;
+            margin-bottom: 12px !important;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .about-page__subtitle {
+            color: #666 !important;
+            font-size: 1.2rem;
+            margin-bottom: 0 !important;
+            font-weight: 500;
+        }
+    }
+
+    &__content {
+        margin-bottom: 40px;
+    }
+
+    &__card {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 1px solid #e8e8e8;
+        background: white;
+
+        &:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .ant-card-head {
+            border-bottom: 2px solid #FFD100;
+            background: white;
+
+            .ant-card-head-title {
+                font-size: 1.3rem;
+                font-weight: 600;
+                color: #009639;
+            }
+        }
+
+        .ant-card-body {
+            padding: 24px;
+            background: white;
+        }
+    }
+
+    &__feature {
+        text-align: center;
+        padding: 20px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        border: 1px solid #e8e8e8;
+
+        &:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        h4 {
+            color: #009639;
+            margin-bottom: 12px !important;
+            font-weight: 600;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 0 !important;
+            line-height: 1.6;
+        }
+    }
+
+    &__footer {
+        margin-top: 40px;
+        padding: 20px 0;
+        border-top: 1px solid #e8e8e8;
+        text-align: center;
+        background: white;
+    }
+
+    // 按钮样式调整
+    .ant-btn {
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+
+        &.ant-btn-primary {
+            background: #FFD100;
+            border-color: #FFD100;
+            color: #333;
+
+            &:hover {
+                background: #FFB300;
+                border-color: #FFB300;
+            }
+        }
+
+        &:not(.ant-btn-primary) {
+            border-color: #009639;
+            color: #009639;
+
+            &:hover {
+                background: #009639;
+                color: white;
+            }
+        }
+    }
+
+    // 响应式设计
+    @media (max-width: 768px) {
+        padding: 16px;
+
+        &__header {
+            padding: 30px 20px;
+            margin-bottom: 24px;
+
+            .about-page__title {
+                font-size: 2rem;
+            }
+
+            .about-page__subtitle {
+                font-size: 1rem;
+            }
+        }
+
+        &__card {
+            .ant-card-body {
+                padding: 16px;
+            }
+        }
+
+        &__feature {
+            padding: 16px;
+        }
+    }
+}
