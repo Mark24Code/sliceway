@@ -1,6 +1,11 @@
+
 #!/bin/bash
 
-# Ensure data directories exist
+# 切换到脚本所在目录，保证无论从哪里调用都能正确执行
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Ensure data directories exist（仅在未自定义挂载时创建本地目录）
 mkdir -p data/uploads
 mkdir -p data/public
 mkdir -p data/db
