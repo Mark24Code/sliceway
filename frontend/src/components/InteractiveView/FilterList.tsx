@@ -96,7 +96,7 @@ const FilterList: React.FC = () => {
 
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
 
-    const handleExport = useCallback(async (renames?: Record<number, string>) => {
+    const handleExport = useCallback(async (renames?: Record<number, string>, clearDirectory?: boolean) => {
         if (!project || selectedLayerIds.length === 0) return;
 
         setGlobalLoading(true);
@@ -104,7 +104,8 @@ const FilterList: React.FC = () => {
             const res = await client.post(`/projects/${project.id}/export`, {
                 layer_ids: selectedLayerIds,
                 scales: exportScales,
-                renames: renames
+                renames: renames,
+                clear_directory: clearDirectory
             });
             message.success(`已导出 ${res.data.count} 个文件`);
             setRenameModalVisible(false);
@@ -258,7 +259,7 @@ const FilterList: React.FC = () => {
             <RenameExportModal
                 visible={renameModalVisible}
                 onCancel={() => setRenameModalVisible(false)}
-                onConfirm={(renames) => handleExport(renames)}
+                onConfirm={(renames, clearDirectory) => handleExport(renames, clearDirectory)}
                 layers={selectedLayers}
             />
 

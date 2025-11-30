@@ -317,11 +317,19 @@ post '/api/projects/:id/export' do
   data = JSON.parse(request.body.read)
   layer_ids = data['layer_ids']
   renames = data['renames'] || {}
+  clear_directory = data['clear_directory'] || false
   puts "DEBUG: Exporting layers #{layer_ids}"
   puts "DEBUG: Renames received: #{renames.inspect}"
+  puts "DEBUG: Clear directory: #{clear_directory}"
 
   layers = project.layers.where(id: layer_ids)
   export_count = 0
+
+  if clear_directory && File.directory?(project.export_path)
+    puts "DEBUG: Clearing directory #{project.export_path}"
+    # Remove all files in the directory, but keep the directory itself
+    FileUtils.rm_rf(Dir.glob(File.join(project.export_path, '*')))
+  end
 
   FileUtils.mkdir_p(project.export_path)
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, List, Input, Avatar } from 'antd';
+import { Modal, List, Input, Avatar, Checkbox } from 'antd';
 import type { Layer } from '../../types';
 import { IMAGE_BASE_URL } from '../../config';
 
 interface RenameExportModalProps {
   visible: boolean;
   onCancel: () => void;
-  onConfirm: (renames: Record<number, string>) => void;
+  onConfirm: (renames: Record<number, string>, clearDirectory: boolean) => void;
   layers: Layer[];
   loading?: boolean;
 }
@@ -19,6 +19,7 @@ const RenameExportModal: React.FC<RenameExportModalProps> = ({
   loading = false
 }) => {
   const [renames, setRenames] = useState<Record<number, string>>({});
+  const [clearDirectory, setClearDirectory] = useState(false);
 
   // Initialize renames with current layer names when modal opens or layers change
   useEffect(() => {
@@ -30,6 +31,7 @@ const RenameExportModal: React.FC<RenameExportModalProps> = ({
         initialRenames[layer.id] = layer.name;
       });
       setRenames(initialRenames);
+      setClearDirectory(false); // Reset checkbox
     }
   }, [visible, layers]);
 
@@ -41,7 +43,7 @@ const RenameExportModal: React.FC<RenameExportModalProps> = ({
   };
 
   const handleOk = () => {
-    onConfirm(renames);
+    onConfirm(renames, clearDirectory);
   };
 
   return (
@@ -55,6 +57,14 @@ const RenameExportModal: React.FC<RenameExportModalProps> = ({
       okText="确认导出"
       cancelText="取消"
     >
+      <div style={{ marginBottom: 16 }}>
+        <Checkbox
+          checked={clearDirectory}
+          onChange={e => setClearDirectory(e.target.checked)}
+        >
+          清除导出目录 (清空目标文件夹中的所有文件)
+        </Checkbox>
+      </div>
       <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
         <List
           dataSource={layers}
