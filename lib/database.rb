@@ -2,13 +2,17 @@ require 'sqlite3'
 require 'active_record'
 require 'fileutils'
 
+# Determine database path
+db_path = ENV['DB_PATH'] || 'db/development.sqlite3'
+db_dir = File.dirname(db_path)
+
 # Ensure db directory exists
-FileUtils.mkdir_p('db')
+FileUtils.mkdir_p(db_dir)
 
 # Connect to database
 ActiveRecord::Base.establish_connection(
   adapter: 'sqlite3',
-  database: 'db/development.sqlite3'
+  database: db_path
 )
 
 # Create tables if they don't exist

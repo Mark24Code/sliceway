@@ -8,7 +8,7 @@ require_relative 'lib/psd_processor'
 require 'faye/websocket'
 require 'json'
 
-set :public_folder, 'public'
+set :public_folder, ENV['PUBLIC_PATH'] || 'public'
 set :bind, '0.0.0.0'
 set :port, 4567
 
@@ -38,7 +38,7 @@ post '/api/projects' do
       end
     end
     # Save file to uploads
-    upload_dir = File.join("uploads")
+    upload_dir = ENV['UPLOADS_PATH'] || File.join("uploads")
     FileUtils.mkdir_p(upload_dir)
     target_path = File.join(upload_dir, "#{Time.now.to_i}_#{filename}")
     File.open(target_path, 'wb') do |f|
@@ -53,7 +53,8 @@ post '/api/projects' do
         File.join(Dir.pwd, params[:export_path]) # 相对路径转绝对路径
       end
     else
-      File.join(Dir.pwd, "exports", "#{Time.now.to_i}") # 默认路径
+      base_export_path = ENV['EXPORTS_PATH'] || File.join(Dir.pwd, "exports")
+      File.join(base_export_path, "#{Time.now.to_i}") # 默认路径
     end
 
     project = Project.create!(
