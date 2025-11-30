@@ -31,6 +31,12 @@ post '/api/projects' do
   # Expect multipart form data
   if params[:file] && params[:file][:tempfile]
     filename = params[:file][:filename]
+    if filename
+      filename.force_encoding('UTF-8')
+      unless filename.valid_encoding?
+        filename.encode!('UTF-8', invalid: :replace, undef: :replace, replace: '?')
+      end
+    end
     # Save file to uploads
     upload_dir = File.join("uploads")
     FileUtils.mkdir_p(upload_dir)
