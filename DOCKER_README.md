@@ -1,39 +1,47 @@
-# Running Sliceway with Docker
+# 使用 Docker 运行 Sliceway
 
-This project runs as a single container application. The frontend is built and served by the Ruby backend.
+本项目以单容器应用方式运行，前端由 Ruby 后端构建并提供服务。
 
-## Prerequisites
+## 前置条件
 
 - Docker
 - Docker Compose
 
-## Quick Start
+## 快速启动
 
-1.  Run the start script:
-    ```bash
-    ./start_docker.sh
-    ```
+1. 运行启动脚本：
 
-2.  Access the application:
-    - URL: [http://localhost:4567](http://localhost:4567)
+   ```bash
+   ./start_docker.sh
+   ```
 
-## Configuration
+2. 访问应用：
+   - 地址：[http://localhost:4567](http://localhost:4567)
 
-The application uses the following volumes mapped to your local `data/` directory:
+## 自定义挂载卷路径
 
-- `data/uploads`: Uploaded PSD files.
-- `data/public`: Processed image assets (persisted).
-- `data/db`: SQLite database file.
-- `data/exports`: Exported files.
+你可以通过设置以下环境变量，覆盖默认的数据挂载路径：
 
-## Environment
+- `UPLOADS_VOLUME`：上传目录（默认 `./data/uploads`）
+- `PUBLIC_VOLUME`：公开资源目录（默认 `./data/public`）
+- `DB_VOLUME`：数据库目录（默认 `./data/db`）
+- `EXPORTS_VOLUME`：导出目录（默认 `./data/exports`）
 
-- **Container**: Ruby 3.3 (Alpine) + Built Frontend Assets.
-- **Server**: Puma (5 threads), Production Mode.
+示例：
 
-## Stopping
+```bash
+UPLOADS_VOLUME=/your/path/uploads PUBLIC_VOLUME=/your/path/public DB_VOLUME=/your/path/db EXPORTS_VOLUME=/your/path/exports ./start_docker.sh
+```
 
-To stop the application:
+## 环境说明
+
+- **容器**：Ruby 3.3 (Alpine) + 已构建前端资源
+- **服务端**：Puma（5 线程），生产模式
+
+## 停止服务
+
+停止应用：
+
 ```bash
 docker-compose down
 ```

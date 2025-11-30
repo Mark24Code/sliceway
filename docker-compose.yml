@@ -6,10 +6,10 @@ services:
     ports:
       - "4567:4567"
     volumes:
-      - ./data/uploads:/app/uploads
-      - ./data/public:/app/public
-      - ./data/db:/app/db
-      - ./data/exports:/app/exports
+      - ${UPLOADS_VOLUME:-./data/uploads}:/app/uploads
+      - ${PUBLIC_VOLUME:-./data/public}:/app/public
+      - ${DB_VOLUME:-./data/db}:/app/db
+      - ${EXPORTS_VOLUME:-./data/exports}:/app/exports
     environment:
       - UPLOADS_PATH=/app/uploads
       - PUBLIC_PATH=/app/public
