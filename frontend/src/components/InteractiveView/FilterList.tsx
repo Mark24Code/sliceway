@@ -1,7 +1,10 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Tabs, Card, Checkbox, Button, message, Select, Space, Input } from 'antd';
+import { Tabs, Card, Checkbox, Button, message, Select, Space, Input, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
 import { useAtom } from 'jotai';
 import ExportConfigButton from '../ExportConfigButton';
+import RenameExportModal from './RenameExportModal';
 import { debounce } from 'lodash';
 import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, hoverLayerIdAtom } from '../../store/atoms';
 import client from '../../api/client';
@@ -21,6 +24,7 @@ const FilterList: React.FC = () => {
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
     const [nameFilter, setNameFilter] = useState('');
+    const [renameModalVisible, setRenameModalVisible] = useState(false);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Filter logic based on Scanner Position
@@ -92,16 +96,18 @@ const FilterList: React.FC = () => {
 
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
 
-    const handleExport = useCallback(async () => {
+    const handleExport = useCallback(async (renames?: Record<number, string>) => {
         if (!project || selectedLayerIds.length === 0) return;
 
         setGlobalLoading(true);
         try {
             const res = await client.post(`/projects/${project.id}/export`, {
                 layer_ids: selectedLayerIds,
-                scales: exportScales
+                scales: exportScales,
+                renames: renames
             });
             message.success(`已导出 ${res.data.count} 个文件`);
+            setRenameModalVisible(false);
         } catch (error) {
             message.error('导出失败');
         } finally {
@@ -142,6 +148,21 @@ const FilterList: React.FC = () => {
         }
         // 注意：不重置 hoverLayerId，保持显示最后一个悬停元素
     };
+
+    const exportMenuProps: MenuProps = {
+        items: [
+            {
+                label: '导出并重命名',
+                key: 'rename',
+                onClick: () => setRenameModalVisible(true),
+            },
+        ],
+    };
+
+    // Get selected layer objects for the modal
+    const selectedLayers = useMemo(() => {
+        return layers.filter(l => selectedLayerIds.includes(l.id));
+    }, [layers, selectedLayerIds]);
 
     return (
         <div className="filter-list">
@@ -207,9 +228,15 @@ const FilterList: React.FC = () => {
                             value={exportScales}
                             onChange={setExportScales}
                         />
-                        <Button type="primary" disabled={selectedLayerIds.length === 0} onClick={debouncedExport}>
+                        <Dropdown.Button
+                            type="primary"
+                            disabled={selectedLayerIds.length === 0}
+                            onClick={debouncedExport}
+                            menu={exportMenuProps}
+                            icon={<DownOutlined />}
+                        >
                             导出 ({selectedLayerIds.length})
-                        </Button>
+                        </Dropdown.Button>
                         <Button
                             type="default"
                             disabled={selectedLayerIds.length === 0}
@@ -227,6 +254,13 @@ const FilterList: React.FC = () => {
                     <TabPane tab="有文本" key="has_text" />
                 </Tabs>
             </div>
+
+            <RenameExportModal
+                visible={renameModalVisible}
+                onCancel={() => setRenameModalVisible(false)}
+                onConfirm={(renames) => handleExport(renames)}
+                layers={selectedLayers}
+            />
 
             <div className="list-content">
                 {filteredLayers.map(layer => (

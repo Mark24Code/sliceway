@@ -316,6 +316,9 @@ post '/api/projects/:id/export' do
   project = Project.find(params[:id])
   data = JSON.parse(request.body.read)
   layer_ids = data['layer_ids']
+  renames = data['renames'] || {}
+  puts "DEBUG: Exporting layers #{layer_ids}"
+  puts "DEBUG: Renames received: #{renames.inspect}"
 
   layers = project.layers.where(id: layer_ids)
   export_count = 0
@@ -336,6 +339,14 @@ post '/api/projects/:id/export' do
     base_name_without_ext = File.basename(base_source, ext)
     dir_name = File.dirname(base_source)
 
+    # Determine target base name
+    # If renamed, use new name directly. Otherwise use default format.
+    if renames[layer.id.to_s] && !renames[layer.id.to_s].empty?
+      target_base_name = renames[layer.id.to_s]
+    else
+      target_base_name = "#{layer.name}_#{layer.id}"
+    end
+
     requested_scales.each do |scale|
       # Determine source filename for this scale
       if scale == '1x'
@@ -347,7 +358,7 @@ post '/api/projects/:id/export' do
       end
 
       # Determine target filename
-      target = File.join(project.export_path, "#{layer.name}_#{layer.id}#{target_suffix}#{ext}")
+      target = File.join(project.export_path, "#{target_base_name}#{target_suffix}#{ext}")
 
       if File.exist?(source)
         FileUtils.cp(source, target)
