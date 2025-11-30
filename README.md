@@ -69,6 +69,15 @@ RACK_ENV=production bundle exec ruby app.rb
 
 ## 🐳 Docker 使用方法
 
+### 使用预构建镜像
+```bash
+# 从 Docker Hub 拉取并运行预构建镜像
+docker run -d \
+  -p 4567:4567 \
+  -v /path/to/data:/data \
+  mark24code/sliceway:latest
+```
+
 ### 构建镜像
 ```bash
 docker build -t sliceway .
@@ -83,23 +92,6 @@ docker run -d \
   sliceway
 ```
 
-### 使用 Docker Compose
-```yaml
-version: '3.8'
-services:
-  sliceway:
-    build: .
-    ports:
-      - "4567:4567"
-    volumes:
-      - ./data:/data
-    environment:
-      - RACK_ENV=production
-```
-
-```bash
-docker-compose up -d
-```
 
 ### 数据持久化
 - **上传文件**: `/data/uploads`

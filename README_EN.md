@@ -65,6 +65,15 @@ RACK_ENV=production bundle exec ruby app.rb
 
 ## 🐳 Docker Usage
 
+### Using Pre-built Image
+```bash
+# Pull and run the pre-built image from Docker Hub
+docker run -d \
+  -p 4567:4567 \
+  -v /path/to/data:/data \
+  mark24code/sliceway:latest
+```
+
 ### Build Image
 ```bash
 docker build -t sliceway:1.0.0 -t sliceway:latest .
@@ -79,24 +88,6 @@ docker run -d \
   sliceway:latest
 ```
 
-### Using Docker Compose
-```yaml
-version: '3.8'
-services:
-  sliceway:
-    image: sliceway:1.0.0
-    build: .
-    ports:
-      - "4567:4567"
-    volumes:
-      - ./data:/data
-    environment:
-      - RACK_ENV=production
-```
-
-```bash
-docker-compose up -d
-```
 
 ### Data Persistence
 - **Uploaded Files**: `/data/uploads`
