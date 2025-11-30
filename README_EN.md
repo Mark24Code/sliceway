@@ -26,6 +26,15 @@
 
 ## 🛠️ Quick Start
 
+### Using Pre-built Image
+```bash
+# Pull and run the pre-built image from Docker Hub
+docker run -d \
+  -p 4567:4567 \
+  -v /path/to/data:/data \
+  mark24code/sliceway:latest
+```
+
 ### Development Environment Setup
 
 #### 1. One-click Initialization
@@ -64,15 +73,6 @@ RACK_ENV=production bundle exec ruby app.rb
 ```
 
 ## 🐳 Docker Usage
-
-### Using Pre-built Image
-```bash
-# Pull and run the pre-built image from Docker Hub
-docker run -d \
-  -p 4567:4567 \
-  -v /path/to/data:/data \
-  mark24code/sliceway:latest
-```
 
 ### Build Image
 ```bash

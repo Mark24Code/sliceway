@@ -30,6 +30,15 @@
 
 ## 🛠️ 快速启动
 
+### 使用预构建镜像
+```bash
+# 从 Docker Hub 拉取并运行预构建镜像
+docker run -d \
+  -p 4567:4567 \
+  -v /path/to/data:/data \
+  mark24code/sliceway:latest
+```
+
 ### 开发环境启动
 
 #### 1. 一键初始化
@@ -69,14 +78,6 @@ RACK_ENV=production bundle exec ruby app.rb
 
 ## 🐳 Docker 使用方法
 
-### 使用预构建镜像
-```bash
-# 从 Docker Hub 拉取并运行预构建镜像
-docker run -d \
-  -p 4567:4567 \
-  -v /path/to/data:/data \
-  mark24code/sliceway:latest
-```
 
 ### 构建镜像
 ```bash
