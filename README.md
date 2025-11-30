@@ -1,5 +1,9 @@
 # Sliceway
 
+<p>
+  <a href="README.md">中文版</a> |
+  <a href="README_EN.md">English Version</a>
+</p>
 <div align="center">
   <img src="frontend/public/logo.svg" alt="Sliceway Logo" width="200" height="200">
 

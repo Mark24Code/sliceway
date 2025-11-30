@@ -9,7 +9,6 @@ import {
 } from "@ant-design/icons";
 import { projectAtom, layersAtom } from "../../store/atoms";
 import client from "../../api/client";
-import { API_BASE_URL } from "../../config";
 import "./ProjectDetail.scss";
 
 const { Sider, Content } = Layout;
@@ -43,31 +42,6 @@ const ProjectDetail: React.FC = () => {
       }
     };
     fetchData();
-
-    // WebSocket connection - use same base URL as API
-    const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
-    const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      console.log("Connected to WebSocket");
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "status_update" && String(data.project_id) === id) {
-          setProject((prev) =>
-            prev ? { ...prev, status: data.status } : null
-          );
-        }
-      } catch (e) {
-        console.error("Failed to parse WebSocket message", e);
-      }
-    };
-
-    return () => {
-      ws.close();
-    };
   }, [id, setProject, setLayers]);
 
   if (loading) {

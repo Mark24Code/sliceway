@@ -1,5 +1,6 @@
 services:
   app:
+    image: sliceway:1.0.0
     build:
       context: .
       dockerfile: Dockerfile

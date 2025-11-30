@@ -5,7 +5,7 @@ require 'fileutils'
 require_relative 'lib/database'
 require_relative 'lib/models'
 require_relative 'lib/psd_processor'
-require 'faye/websocket'
+require_relative 'lib/version'
 require 'json'
 
 set :bind, '0.0.0.0'
@@ -85,6 +85,15 @@ get '*' do
   send_file File.join(static_path, 'index.html')
 end
 
+# System Info
+get '/api/version' do
+  json({
+    version: Sliceway::VERSION,
+    name: 'Sliceway',
+    description: '现代化的 Photoshop 文件处理和导出工具'
+  })
+end
+
 # Projects
 get '/api/projects' do
   page = (params[:page] || 1).to_i
@@ -137,14 +146,6 @@ post '/api/projects' do
 
     # 保存任务PID到全局变量
     $running_tasks[project.id] = pid
-
-    # 立即发送状态更新给所有客户端
-    message = { type: 'status_update', project_id: project.id, status: project.status }.to_json
-    $ws_clients.each { |ws| ws.send(message) }
-
-    # 发送新项目创建通知
-    new_project_message = { type: 'project_created', project: project.as_json }.to_json
-    $ws_clients.each { |ws| ws.send(new_project_message) }
 
     json project
   else
@@ -267,43 +268,6 @@ end
 
 # 全局变量来跟踪正在运行的任务
 $running_tasks = {}
-
-# WebSocket clients
-$ws_clients = []
-
-# WebSocket endpoint
-get '/ws' do
-  if Faye::WebSocket.websocket?(request.env)
-    ws = Faye::WebSocket.new(request.env)
-
-    ws.on :open do |event|
-      $ws_clients << ws
-    end
-
-    ws.on :close do |event|
-      $ws_clients.delete(ws)
-      ws = nil
-    end
-
-    return ws.rack_response
-  else
-    status 404
-    "WebSocket endpoint - use WebSocket protocol"
-  end
-end
-
-# Internal endpoint for status updates
-post '/internal/notify' do
-  data = JSON.parse(request.body.read)
-  project_id = data['project_id']
-  status = data['status']
-
-  # Broadcast to all connected clients
-  message = { type: 'status_update', project_id: project_id, status: status }.to_json
-  $ws_clients.each { |ws| ws.send(message) }
-
-  json success: true
-end
 
 delete '/api/projects/batch' do
   content_type :json

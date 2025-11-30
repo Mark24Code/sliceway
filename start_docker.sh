@@ -17,7 +17,7 @@ mkdir -p "$DATA_VOLUME/exports"
 
 # 构建镜像
 echo "构建 Sliceway Docker 镜像..."
-docker build -t sliceway:latest .
+docker build -t sliceway:1.0.0 -t sliceway:latest .
 
 # 停止并删除旧容器（如果存在）
 docker stop sliceway 2>/dev/null && docker rm sliceway 2>/dev/null
