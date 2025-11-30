@@ -10,7 +10,6 @@ import { globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Project } from '../../types';
 import { truncatePathFromStart } from '../../utils/string';
-import { API_BASE_URL } from '../../config';
 import './ProjectList.scss';
 
 const { Dragger } = Upload;
@@ -32,6 +31,9 @@ const ProjectList: React.FC = () => {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
+    // 批量选择状态
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
     const fetchProjects = async () => {
         setLoading(true);
         try {
@@ -46,41 +48,6 @@ const ProjectList: React.FC = () => {
 
     useEffect(() => {
         fetchProjects();
-
-        // WebSocket connection - use same base URL as API
-        const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
-        const ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-            console.log('Connected to WebSocket');
-        };
-
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'status_update') {
-                    const projectId = Number(data.project_id);
-                    setProjects(prevProjects =>
-                        prevProjects.map(p =>
-                            p.id === projectId ? { ...p, status: data.status } : p
-                        )
-                    );
-                } else if (data.type === 'project_created') {
-                    // 当有新项目创建时，重新获取项目列表
-                    fetchProjects();
-                }
-            } catch (e) {
-                console.error('Failed to parse WebSocket message', e);
-            }
-        };
-
-        ws.onclose = () => {
-            console.log('Disconnected from WebSocket');
-        };
-
-        return () => {
-            ws.close();
-        };
     }, []);
 
     const handleCreate = useCallback(async (values: any) => {
@@ -215,6 +182,48 @@ const ProjectList: React.FC = () => {
         [handleDelete]
     );
 
+    // 批量删除处理函数
+    const handleBatchDelete = useCallback(async (ids: number[]) => {
+        // 获取选中的项目以显示状态特定的警告
+        const selectedProjects = projects.filter(p => ids.includes(p.id));
+
+        // 创建确认消息
+        let content = `确定要删除选中的 ${ids.length} 个项目吗？此操作将删除项目及其相关文件。`;
+
+        // 添加状态特定的警告
+        const processingCount = selectedProjects.filter(p => p.status === 'processing').length;
+        if (processingCount > 0) {
+            content += `\n\n注意：其中有 ${processingCount} 个项目正在处理中，删除操作将先停止处理任务。`;
+        }
+
+        const readyCount = selectedProjects.filter(p => p.status === 'ready').length;
+        if (readyCount > 0) {
+            content += `\n\n注意：其中有 ${readyCount} 个项目已就绪，删除操作将清理所有已生成的文件。`;
+        }
+
+        Modal.confirm({
+            title: '确认批量删除',
+            content: content,
+            okText: '确认删除',
+            cancelText: '取消',
+            onOk: async () => {
+                setGlobalLoading(true);
+                try {
+                    await client.delete('/projects/batch', {
+                        data: { ids }
+                    });
+                    message.success(`成功删除 ${ids.length} 个项目`);
+                    setSelectedRowKeys([]);
+                    fetchProjects();
+                } catch (error) {
+                    message.error('批量删除失败');
+                } finally {
+                    setGlobalLoading(false);
+                }
+            }
+        });
+    }, [projects, setGlobalLoading]);
+
 
     const getStatusText = (status: string) => {
         const statusMap: Record<string, string> = {
@@ -279,6 +288,12 @@ const ProjectList: React.FC = () => {
             return true;
         });
     }, [projects, nameFilter, statusFilter, dateRangeFilter]);
+
+    // 行选择配置
+    const rowSelection = {
+        selectedRowKeys,
+        onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
+    };
 
     const columns = [
         {
@@ -410,6 +425,13 @@ const ProjectList: React.FC = () => {
                 <h1 className="project-list__header-title">项目列表</h1>
                 <div className="project-list__header-actions">
                     <Button
+                        danger
+                        disabled={selectedRowKeys.length === 0}
+                        onClick={() => handleBatchDelete(selectedRowKeys as number[])}
+                    >
+                        删除选中项 ({selectedRowKeys.length})
+                    </Button>
+                    <Button
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={() => setIsModalVisible(true)}
@@ -471,6 +493,7 @@ const ProjectList: React.FC = () => {
                 dataSource={filteredProjects}
                 columns={columns}
                 rowKey="id"
+                rowSelection={rowSelection}
                 loading={loading}
                 locale={{
                     emptyText: '暂无数据'
@@ -482,7 +505,13 @@ const ProjectList: React.FC = () => {
                 title="创建新项目"
                 open={isModalVisible}
                 onCancel={() => setIsModalVisible(false)}
-                onOk={() => form.submit()}
+                onOk={() => {
+                    form.submit()
+                    setTimeout(() => {
+                        fetchProjects()
+                    }, 1000)
+
+                }}
                 okText="确定"
                 cancelText="取消"
             >

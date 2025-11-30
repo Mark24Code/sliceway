@@ -19,7 +19,10 @@ RUN apk add --no-cache \
     tzdata \
     git \
     pkgconfig \
-    procps
+    procps \
+    rust \
+    cargo \
+    musl-dev
 
 WORKDIR /app
 
@@ -53,6 +56,7 @@ ENV PUBLIC_PATH=/data/public
 ENV DB_PATH=/data/db/production.sqlite3
 ENV EXPORTS_PATH=/data/exports
 ENV STATIC_PATH=/app/dist
+ENV RUBY_YJIT_ENABLE=1
 
 # Start command
 CMD ["sh", "-c", "bundle exec rake db:migrate && bundle exec puma -t 5:5 -p 4567 -e production"]

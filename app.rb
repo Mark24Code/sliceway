@@ -305,6 +305,116 @@ post '/internal/notify' do
   json success: true
 end
 
+delete '/api/projects/batch' do
+  content_type :json
+
+  begin
+    ids = JSON.parse(request.body.read)['ids']
+
+    if ids.nil? || !ids.is_a?(Array) || ids.empty?
+      status 400
+      return { error: 'Invalid project IDs' }.to_json
+    end
+
+    deleted_count = 0
+    errors = []
+
+    ids.each do |id|
+      begin
+        project = Project.find(id)
+
+        # 根据项目状态执行不同的清理逻辑
+        case project.status
+        when 'processing'
+          # 如果项目正在处理中，先中止后台任务
+          puts "项目 #{project.id} 正在处理中，先中止处理任务..."
+          if $running_tasks[project.id]
+            begin
+              Process.kill("TERM", $running_tasks[project.id])
+              puts "已中止项目 #{project.id} 的处理任务 (PID: #{$running_tasks[project.id]})"
+            rescue Errno::ESRCH
+              puts "进程 #{$running_tasks[project.id]} 不存在"
+            end
+            $running_tasks.delete(project.id)
+          end
+
+        when 'ready'
+          # 如果项目已完成，清理所有生成的文件
+          puts "项目 #{project.id} 已完成，清理生成的文件..."
+
+        when 'pending', 'error'
+          # 如果项目待处理或出错，清理基础文件
+          puts "项目 #{project.id} 状态为 #{project.status}，清理相关文件..."
+        end
+
+        # 清理所有相关文件
+        begin
+          # Clean up uploaded PSD file
+          if project.psd_path && File.exist?(project.psd_path)
+            FileUtils.rm_rf(project.psd_path)
+            puts "已清理PSD文件: #{project.psd_path}"
+          end
+
+          # Clean up export directory
+          if project.export_path && Dir.exist?(project.export_path)
+            FileUtils.rm_rf(project.export_path)
+            puts "已清理导出目录: #{project.export_path}"
+          end
+
+          # Clean up exported images in public directory
+          public_path = ENV['PUBLIC_PATH'] || 'public'
+          project.layers.each do |layer|
+            if layer.image_path && File.exist?(File.join(public_path, layer.image_path))
+              FileUtils.rm_rf(File.join(public_path, layer.image_path))
+              puts "已清理图层图片: #{layer.image_path}"
+            end
+          end
+
+          # Clean up processed images directory
+          processed_dir = File.join(public_path, 'processed', project.id.to_s)
+          if Dir.exist?(processed_dir)
+            FileUtils.rm_rf(processed_dir)
+            puts "已清理处理图片目录: #{processed_dir}"
+          end
+
+          puts "项目 #{project.id} 文件清理完成"
+
+        rescue => e
+          puts "Warning: Failed to clean up some files: #{e.message}"
+        end
+
+        # 删除项目记录
+        project.destroy
+        puts "项目 #{project.id} 记录已删除"
+        deleted_count += 1
+
+      rescue ActiveRecord::RecordNotFound
+        errors << "Project #{id} not found"
+      rescue => e
+        errors << "Failed to delete project #{id}: #{e.message}"
+      end
+    end
+
+    if errors.any?
+      {
+        success: false,
+        deleted_count: deleted_count,
+        errors: errors
+      }.to_json
+    else
+      {
+        success: true,
+        deleted_count: deleted_count,
+        message: "Successfully deleted #{deleted_count} projects"
+      }.to_json
+    end
+
+  rescue JSON::ParserError
+    status 400
+    { error: 'Invalid JSON format' }.to_json
+  end
+end
+
 delete '/api/projects/:id' do
   project = Project.find(params[:id])
 
