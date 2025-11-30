@@ -122,7 +122,7 @@ const ProjectDetail: React.FC = () => {
         <Sider theme="light" width={200}>
           {/* Logo 区域 */}
           <div className="project-detail__logo-area">
-            <img src="/vite.svg" alt="Logo" className="project-detail__logo" />
+            <img src="/logo.svg" alt="Logo" className="project-detail__logo" />
           </div>
 
           {/* 返回按钮 */}
