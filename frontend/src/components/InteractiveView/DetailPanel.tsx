@@ -67,8 +67,28 @@ const DetailPanel: React.FC = () => {
     // 构建图片URL
     const imageUrl = layer?.image_path ? `${IMAGE_BASE_URL}/${layer.image_path}` : '';
 
+    // 监听空格键预览
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                if (previewVisible) {
+                    e.preventDefault();
+                    setPreviewVisible(false);
+                } else if (layer) {
+                    e.preventDefault();
+                    setPreviewVisible(true);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [layer, previewVisible]);
+
     if (!layer) {
-        return <div style={{ transform: 'translateY(50%)', padding: 24, color: '#999', textAlign:'center'}}>
+        return <div style={{ transform: 'translateY(50%)', padding: 24, color: '#999', textAlign: 'center' }}>
             <p>鼠标悬浮在一个“图层”</p>
             <p>查看详情</p>
         </div>;
