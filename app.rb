@@ -24,6 +24,21 @@ end
 static_path = ENV['STATIC_PATH'] || 'dist'
 use Rack::Static, :urls => ["/assets"], :root => static_path
 
+# SPA Catch-all route
+# Must be last to avoid overriding API routes
+get '/' do
+  static_path = ENV['STATIC_PATH'] || 'dist'
+  send_file File.join(static_path, 'index.html')
+end
+
+get '*' do
+  pass if request.path_info.start_with?('/api')
+
+  # Serve index.html for SPA routing from STATIC_PATH
+  static_path = ENV['STATIC_PATH'] || 'dist'
+  send_file File.join(static_path, 'index.html')
+end
+
 # Projects
 get '/api/projects' do
   page = (params[:page] || 1).to_i
