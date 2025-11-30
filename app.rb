@@ -138,6 +138,14 @@ post '/api/projects' do
     # 保存任务PID到全局变量
     $running_tasks[project.id] = pid
 
+    # 立即发送状态更新给所有客户端
+    message = { type: 'status_update', project_id: project.id, status: project.status }.to_json
+    $ws_clients.each { |ws| ws.send(message) }
+
+    # 发送新项目创建通知
+    new_project_message = { type: 'project_created', project: project.as_json }.to_json
+    $ws_clients.each { |ws| ws.send(new_project_message) }
+
     json project
   else
     status 400
@@ -278,6 +286,9 @@ get '/ws' do
     end
 
     return ws.rack_response
+  else
+    status 404
+    "WebSocket endpoint - use WebSocket protocol"
   end
 end
 

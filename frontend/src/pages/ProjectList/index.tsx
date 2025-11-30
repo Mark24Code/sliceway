@@ -10,6 +10,7 @@ import { globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Project } from '../../types';
 import { truncatePathFromStart } from '../../utils/string';
+import { API_BASE_URL } from '../../config';
 import './ProjectList.scss';
 
 const { Dragger } = Upload;
@@ -46,8 +47,9 @@ const ProjectList: React.FC = () => {
     useEffect(() => {
         fetchProjects();
 
-        // WebSocket connection
-        const ws = new WebSocket('ws://localhost:4567/ws');
+        // WebSocket connection - use same base URL as API
+        const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
+        const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
             console.log('Connected to WebSocket');
@@ -63,6 +65,9 @@ const ProjectList: React.FC = () => {
                             p.id === projectId ? { ...p, status: data.status } : p
                         )
                     );
+                } else if (data.type === 'project_created') {
+                    // 当有新项目创建时，重新获取项目列表
+                    fetchProjects();
                 }
             } catch (e) {
                 console.error('Failed to parse WebSocket message', e);

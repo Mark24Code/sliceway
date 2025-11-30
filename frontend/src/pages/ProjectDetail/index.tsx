@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import { projectAtom, layersAtom } from "../../store/atoms";
 import client from "../../api/client";
+import { API_BASE_URL } from "../../config";
 import "./ProjectDetail.scss";
 
 const { Sider, Content } = Layout;
@@ -43,8 +44,9 @@ const ProjectDetail: React.FC = () => {
     };
     fetchData();
 
-    // WebSocket connection
-    const ws = new WebSocket("ws://localhost:4567/ws");
+    // WebSocket connection - use same base URL as API
+    const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log("Connected to WebSocket");

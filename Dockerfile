@@ -18,7 +18,8 @@ RUN apk add --no-cache \
     build-base \
     tzdata \
     git \
-    pkgconfig
+    pkgconfig \
+    procps
 
 WORKDIR /app
 

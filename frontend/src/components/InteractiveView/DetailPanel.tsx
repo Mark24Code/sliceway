@@ -91,6 +91,7 @@ const DetailPanel: React.FC = () => {
         return <div style={{ transform: 'translateY(50%)', padding: 24, color: '#999', textAlign: 'center' }}>
             <p>鼠标悬浮在一个“图层”</p>
             <p>查看详情</p>
+            <p>“空格”直接预览或关闭预览</p>
         </div>;
     }
 
