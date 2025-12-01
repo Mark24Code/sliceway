@@ -31,6 +31,8 @@
 ## 🛠️ 快速启动
 
 ### 使用预构建镜像
+
+Linux/MacOS
 ```bash
 # 从 Docker Hub 拉取并运行预构建镜像
 docker run -d \
@@ -38,6 +40,16 @@ docker run -d \
   -v /path/to/data:/data \
   mark24code/sliceway:latest
 ```
+
+Windows
+
+```cmd
+docker run -d ^
+  -p 4567:4567 ^
+  -v "C:\path\to\exports:/data" ^
+  mark24code/sliceway:latest
+```
+
 
 ### 开发环境启动
 

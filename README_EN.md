@@ -80,12 +80,24 @@ docker build -t sliceway:1.0.0 -t sliceway:latest .
 ```
 
 ### Run Container
+
+Linux/MacOS
+
 ```bash
 docker run -d \
   --name sliceway \
   -p 4567:4567 \
   -v /path/to/data:/data \
   sliceway:latest
+```
+
+Windows
+
+```cmd
+docker run -d ^
+  -p 4567:4567 ^
+  -v "C:\path\to\exports:/data" ^
+  mark24code/sliceway:latest
 ```
 
 
