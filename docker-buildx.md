@@ -13,4 +13,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t your-image:tag . --pus
 # docker login
 
 docker buildx build --platform linux/amd64,linux/arm64 -t mark24code/sliceway:latest --push .
+
+docker buildx build --platform linux/amd64,linux/arm64 -t mark24code/sliceway:latest -t mark24code/sliceway:v1.1.0 --push .
+
 ```
