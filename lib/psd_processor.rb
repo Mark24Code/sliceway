@@ -159,9 +159,36 @@ class PsdProcessor
 
     filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
     png = nil
+    image = nil
 
     begin
-      png = slice.to_png
+      # 检查是否是 PSB 格式
+      if File.extname(@project.psd_path).downcase == '.psb'
+        # PSB 格式使用 RMagick 裁剪方式
+        begin
+          image = Magick::Image.read(@project.psd_path + "[0]").first
+
+          # 裁剪切片区域
+          cropped = image.crop(slice.left, slice.top, slice.width, slice.height)
+
+          # 保存到临时文件
+          temp_path = File.join(@output_dir, filename)
+          cropped.write(temp_path)
+
+          # 使用 ChunkyPNG 读取以保持兼容性
+          png = ChunkyPNG::Image.from_file(temp_path)
+
+          cropped.destroy!
+          cropped = nil
+        rescue => e
+          puts "⚠ [PSB切片] RMagick 处理失败，尝试标准方式: #{e.message}"
+          png = slice.to_png
+        end
+      else
+        # PSD 格式使用标准方式
+        png = slice.to_png
+      end
+
       return unless png
 
       saved_path = save_scaled_images(png, filename)
@@ -183,8 +210,13 @@ class PsdProcessor
       log_memory_periodically
     rescue => e
       puts "✗ [导出切片] #{slice.name} 失败: #{e.message}"
+      puts "   堆栈: #{e.backtrace.first(3).join("\n   ")}"
     ensure
-      # 显式释放 PNG 对象
+      # 显式释放对象
+      if image
+        image.destroy!
+        image = nil
+      end
       png = nil
     end
   end
