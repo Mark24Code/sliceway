@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Tabs, Card, Checkbox, Button, message, Select, Space, Input, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { DownOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useAtom } from 'jotai';
 import ExportConfigButton from '../ExportConfigButton';
 import RenameExportModal from './RenameExportModal';
@@ -23,6 +23,7 @@ const FilterList: React.FC = () => {
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
+    const [hiddenFilter, setHiddenFilter] = useState<string[]>([]);
     const [nameFilter, setNameFilter] = useState('');
     const [renameModalVisible, setRenameModalVisible] = useState(false);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,6 +82,17 @@ const FilterList: React.FC = () => {
             });
         }
 
+        // 隐藏状态筛选
+        if (hiddenFilter.length > 0) {
+            list = list.filter(l => {
+                return hiddenFilter.some(status => {
+                    if (status === 'hidden') return l.hidden === true;
+                    if (status === 'visible') return l.hidden !== true;
+                    return false;
+                });
+            });
+        }
+
         // 标签页筛选
         if (activeTab === 'equidistant') {
             list = list.filter(l => Math.abs(l.width - l.height) < 2); // Width approx equal Height
@@ -92,7 +104,7 @@ const FilterList: React.FC = () => {
             list = list.filter(l => l.layer_type === 'group' || l.layer_type === 'text'); // Groups might have text
         }
         return list;
-    }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, activeTab, nameFilter]);
+    }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, hiddenFilter, activeTab, nameFilter]);
 
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
     const [trimTransparent, setTrimTransparent] = useState<boolean>(false);
@@ -226,6 +238,20 @@ const FilterList: React.FC = () => {
                             <Select.Option value="vertical">纵向</Select.Option>
                         </Select>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {/* <span style={{ marginRight: 8 }}>状态:</span> */}
+                        <Select
+                            mode="multiple"
+                            placeholder="选择可见状态"
+                            value={hiddenFilter}
+                            onChange={setHiddenFilter}
+                            style={{ width: 150 }}
+                            allowClear
+                        >
+                            <Select.Option value="visible">可见</Select.Option>
+                            <Select.Option value="hidden">隐藏</Select.Option>
+                        </Select>
+                    </div>
                     <Space>
                         <ExportConfigButton
                             value={exportScales}
@@ -287,7 +313,35 @@ const FilterList: React.FC = () => {
                             <div
                                 className="cover"
                                 onClick={() => toggleSelection(layer.id)}
+                                style={{
+                                    position: 'relative',
+                                    opacity: layer.hidden ? 0.6 : 1,
+                                    filter: layer.hidden ? 'grayscale(30%)' : 'none'
+                                }}
                             >
+                                {layer.hidden && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: 4,
+                                        left: 4,
+                                        fontSize: '20px',
+                                        zIndex: 2,
+                                        textShadow: '0 0 3px rgba(255,255,255,0.8)'
+                                    }}>
+                                        <EyeInvisibleOutlined />
+                                    </span>
+                                )}
+                                {layer.hidden && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                                        zIndex: 1
+                                    }} />
+                                )}
                                 {layer.image_path ? (
                                     <img
                                         alt={layer.name}

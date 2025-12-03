@@ -56,8 +56,14 @@ unless ActiveRecord::Base.connection.table_exists?(:layers)
       t.string :image_path # Relative path
       t.text :metadata # JSON for extra props
       t.integer :parent_id
+      t.boolean :hidden, default: false # Layer visibility status in PSD
     end
     add_index :layers, :project_id
     add_index :layers, [:project_id, :layer_type]
   end
+end
+
+# Add hidden column if it doesn't exist (for existing databases)
+unless ActiveRecord::Base.connection.column_exists?(:layers, :hidden)
+  ActiveRecord::Base.connection.add_column :layers, :hidden, :boolean, default: false
 end

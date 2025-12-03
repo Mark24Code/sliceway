@@ -27,6 +27,7 @@ export interface Layer {
   image_path?: string;
   metadata?: any;
   parent_id?: number;
+  hidden?: boolean;
 }
 
 export interface ProjectListResponse {

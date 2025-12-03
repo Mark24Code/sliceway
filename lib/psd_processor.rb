@@ -157,6 +157,10 @@ class PsdProcessor
       return
     end
 
+    # 检查切片的可见性状态
+    # 切片通常没有 visible? 方法，默认为可见
+    hidden = slice.respond_to?(:visible?) ? !slice.visible? : false
+
     filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
     png = nil
     image = nil
@@ -203,7 +207,8 @@ class PsdProcessor
         width: slice.width,
         height: slice.height,
         image_path: saved_path,
-        metadata: { scales: @project.export_scales || ['1x'] }
+        metadata: { scales: @project.export_scales || ['1x'] },
+        hidden: hidden
       )
 
       puts "✓ [导出切片] #{slice.name} (#{slice.width}×#{slice.height})"
@@ -234,6 +239,9 @@ class PsdProcessor
       return
     end
 
+    # 提取图层的可见性状态
+    hidden = node.respond_to?(:visible?) ? !node.visible? : false
+
     layer_type = determine_type(node)
 
     # 准备记录属性
@@ -246,7 +254,8 @@ class PsdProcessor
       width: node.width,
       height: node.height,
       parent_id: parent_id,
-      metadata: { scales: @project.export_scales || ['1x'] }
+      metadata: { scales: @project.export_scales || ['1x'] },
+      hidden: hidden
     }
 
     # 处理特定类型

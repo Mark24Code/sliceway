@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Table, Button, Input, Space, message, Select } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { EyeInvisibleOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useAtom } from 'jotai';
 import { debounce } from 'lodash';
 import { layersAtom, projectAtom, globalLoadingAtom } from '../../store/atoms';
@@ -20,6 +20,7 @@ const FullListView: React.FC = () => {
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
+    const [hiddenFilter, setHiddenFilter] = useState<string[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
     const [trimTransparent, setTrimTransparent] = useState<boolean>(false);
@@ -86,7 +87,7 @@ const FullListView: React.FC = () => {
     // 筛选条件改变时重置到第一页
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchText, typeFilter, sizeFilter, ratioFilter]);
+    }, [searchText, typeFilter, sizeFilter, ratioFilter, hiddenFilter]);
 
     const filteredLayers = layers.filter(l => {
         // Search Filter
@@ -124,6 +125,16 @@ const FullListView: React.FC = () => {
                 return false;
             });
             if (!ratioMatch) return false;
+        }
+
+        // Hidden Filter
+        if (hiddenFilter.length > 0) {
+            const hiddenMatch = hiddenFilter.some(status => {
+                if (status === 'hidden') return l.hidden === true;
+                if (status === 'visible') return l.hidden !== true;
+                return false;
+            });
+            if (!hiddenMatch) return false;
         }
 
         return true;
@@ -170,6 +181,16 @@ const FullListView: React.FC = () => {
                         />
                     </ImagePreviewHover> :
                     <span>无图片</span>
+            ),
+        },
+        {
+            title: '状态',
+            key: 'hidden',
+            width: 80,
+            render: (_: any, record: Layer) => (
+                record.hidden ?
+                    <span style={{ whiteSpace: 'nowrap' }}><EyeInvisibleOutlined /></span> :
+                    <span style={{ whiteSpace: 'nowrap' }}><EyeOutlined /></span>
             ),
         },
         {
@@ -245,6 +266,18 @@ const FullListView: React.FC = () => {
                     <Select.Option value="square">正方形</Select.Option>
                     <Select.Option value="horizontal">横向</Select.Option>
                     <Select.Option value="vertical">纵向</Select.Option>
+                </Select>
+                <Select
+                    mode="multiple"
+                    placeholder="可见状态"
+                    value={hiddenFilter}
+                    onChange={setHiddenFilter}
+                    style={{ width: 150 }}
+                    allowClear
+                    maxTagCount="responsive"
+                >
+                    <Select.Option value="visible">可见</Select.Option>
+                    <Select.Option value="hidden">隐藏</Select.Option>
                 </Select>
                 <ExportConfigButton
                     value={exportScales}
