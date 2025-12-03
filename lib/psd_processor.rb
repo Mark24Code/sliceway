@@ -41,14 +41,28 @@ class PsdProcessor
 
   # 强制垃圾回收并记录内存使用情况
   def force_gc_after_large_operation(operation_name)
-    puts "在 #{operation_name} 后强制垃圾回收"
-    GC.start
-    memory_usage = PerformanceMonitor.memory_usage
-    puts "#{operation_name} 后内存使用: #{memory_usage} MB"
+    before_memory = PerformanceMonitor.memory_usage
+    puts "#{operation_name} 前内存: #{before_memory} MB"
+
+    # 强制完整的垃圾回收
+    3.times do
+      GC.start(full_mark: true, immediate_sweep: true)
+    end
+
+    after_memory = PerformanceMonitor.memory_usage
+    freed_memory = before_memory - after_memory
+    puts "#{operation_name} 后内存: #{after_memory} MB (释放: #{freed_memory} MB)"
   end
 
   def call
     @project.update(status: 'processing')
+
+    # 记录初始内存
+    initial_memory = PerformanceMonitor.memory_usage
+    puts "="*60
+    puts "开始处理PSD: #{@project.psd_path}"
+    puts "初始内存使用: #{initial_memory} MB"
+    puts "="*60
 
     begin
       PerformanceMonitor.measure("完整PSD处理") do
@@ -69,6 +83,14 @@ class PsdProcessor
           force_gc_after_large_operation("树结构处理")
         end
       end
+
+      final_memory = PerformanceMonitor.memory_usage
+      memory_increase = final_memory - initial_memory
+      puts "="*60
+      puts "PSD处理完成"
+      puts "最终内存使用: #{final_memory} MB"
+      puts "内存增长: #{memory_increase} MB"
+      puts "="*60
 
       @project.update(status: 'ready')
     rescue => e
@@ -97,6 +119,7 @@ class PsdProcessor
     # Check if the source file is a PSB
     if File.extname(@project.psd_path).downcase == '.psb'
       puts "Detected PSB file, using RMagick for preview generation..."
+      image = nil
       begin
         # Use RMagick to convert PSB to PNG
         # [0] selects the flattened layer (usually the first image in the sequence for PSD/PSB)
@@ -105,11 +128,23 @@ class PsdProcessor
       rescue => e
         puts "Warning: RMagick failed to generate preview: #{e.message}"
         puts "Falling back to ruby-psd (which may fail for large PSB)"
-        psd.image.save_as_png(path)
+        psd_image = psd.image
+        psd_image.save_as_png(path)
+        psd_image = nil
+      ensure
+        # 显式销毁 RMagick 图像对象以释放内存
+        if image
+          image.destroy!
+          image = nil
+        end
+        GC.start(full_mark: true, immediate_sweep: true)
       end
     else
       # Use existing logic for PSD
-      psd.image.save_as_png(path)
+      psd_image = psd.image
+      psd_image.save_as_png(path)
+      psd_image = nil
+      GC.start(full_mark: true, immediate_sweep: true)
     end
   end
 
@@ -143,7 +178,8 @@ class PsdProcessor
       threads.each(&:join)
 
       # 批次处理完成后强制垃圾回收
-      force_gc_after_large_operation("切片批次处理")
+      GC.start(full_mark: true, immediate_sweep: true)
+      puts "切片批次完成: 当前内存: #{PerformanceMonitor.memory_usage} MB"
     end
   end
 
@@ -164,6 +200,7 @@ class PsdProcessor
     end
 
     filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
+    png = nil
 
     begin
       png = slice.to_png
@@ -186,6 +223,13 @@ class PsdProcessor
     rescue => e
       puts "导出切片 #{slice.name} 失败: #{e.message}"
       puts e.backtrace if e.message.include?('nil')
+    ensure
+      # 显式释放 PNG 对象
+      png = nil
+      if @processed_children % 5 == 0  # 每5个切片强制GC
+        GC.start(full_mark: true, immediate_sweep: true)
+        puts "切片处理: 已处理 #{@processed_children} 个, 当前内存: #{PerformanceMonitor.memory_usage} MB"
+      end
     end
   end
 
@@ -236,7 +280,8 @@ class PsdProcessor
         # 每处理10个子节点后强制垃圾回收
         @processed_children += 1
         if @processed_children % 10 == 0
-          force_gc_after_large_operation("处理#{@processed_children}个子节点")
+          GC.start(full_mark: true, immediate_sweep: true)
+          puts "节点处理: 已处理 #{@processed_children} 个子节点, 当前内存: #{PerformanceMonitor.memory_usage} MB"
         end
       end
     end
@@ -245,6 +290,7 @@ class PsdProcessor
   def handle_group(node, attrs)
     # Export with text
     filename_with = "group_#{node.id}_with_text_#{SecureRandom.hex(4)}.png"
+    png = nil
 
     begin
       png = node.to_png
@@ -252,17 +298,22 @@ class PsdProcessor
       attrs[:image_path] = saved_path
     rescue => e
       puts "Failed to export group #{node.name} with text: #{e.message}"
+    ensure
+      png = nil  # 释放 PNG 对象
     end
 
     # Export without text (using logic from export_groups.rb)
     filename_without = "group_#{node.id}_no_text_#{SecureRandom.hex(4)}.png"
+    png_without = nil
 
     begin
-      png = render_group_without_text(node)
-      saved_path = save_scaled_images(png, filename_without)
+      png_without = render_group_without_text(node)
+      saved_path = save_scaled_images(png_without, filename_without)
       attrs[:metadata][:image_path_no_text] = saved_path
     rescue => e
       puts "Failed to export group #{node.name} without text: #{e.message}"
+    ensure
+      png_without = nil  # 释放 PNG 对象
     end
   end
 
@@ -273,23 +324,31 @@ class PsdProcessor
     end
     # Text layers also have an image representation usually
     filename = "text_#{node.id}_#{SecureRandom.hex(4)}.png"
+    png = nil
+
     begin
       png = node.to_png
       saved_path = save_scaled_images(png, filename)
       attrs[:image_path] = saved_path
     rescue => e
       puts "Failed to export text layer #{node.name}: #{e.message}"
+    ensure
+      png = nil  # 释放 PNG 对象
     end
   end
 
   def handle_layer(node, attrs)
     filename = "layer_#{node.id}_#{SecureRandom.hex(4)}.png"
+    png = nil
+
     begin
       png = node.to_png
       saved_path = save_scaled_images(png, filename)
       attrs[:image_path] = saved_path
     rescue => e
       puts "Failed to export layer #{node.name}: #{e.message}"
+    ensure
+      png = nil  # 释放 PNG 对象
     end
   end
 
@@ -308,22 +367,34 @@ class PsdProcessor
 
   def render_group_without_text(group)
     visibility_states = {}
-    group.descendants.each do |node|
-      if text_layer?(node)
-        visibility_states[node] = node.force_visible
-        node.force_visible = false
-      end
-    end
+    renderer = nil
+    png = nil
 
     begin
+      # 保存并隐藏所有文本图层
+      group.descendants.each do |node|
+        if text_layer?(node)
+          visibility_states[node] = node.force_visible
+          node.force_visible = false
+        end
+      end
+
+      # 渲染组
       renderer = PSD::Renderer.new(group, render_hidden: true)
       renderer.render!
       png = renderer.to_png
     ensure
+      # 恢复文本图层可见性
       visibility_states.each do |node, state|
         node.force_visible = state
       end
+
+      # 清理临时变量
+      visibility_states.clear
+      visibility_states = nil
+      renderer = nil
     end
+
     png
   end
 
@@ -345,51 +416,62 @@ class PsdProcessor
 
     base_name = File.basename(base_filename, ".*")
     ext = File.extname(base_filename)
+    original_path = nil
 
-    PerformanceMonitor.measure("图像缩放处理: #{base_filename}") do
-      scales.each do |scale|
-        begin
-          if scale == '1x'
-            path = File.join(@output_dir, base_filename)
-            png.save(path, :fast_rgba)
-            saved_base_path = relative_path(base_filename)
+    begin
+      PerformanceMonitor.measure("图像缩放处理: #{base_filename}") do
+        scales.each_with_index do |scale, index|
+          begin
+            if scale == '1x'
+              path = File.join(@output_dir, base_filename)
+              original_path = path
+              png.save(path, :fast_rgba)
+              saved_base_path = relative_path(base_filename)
 
-            # 如果有多个缩放比例，释放原始PNG以节省内存
-            if scales.length > 1
-              png = nil  # 释放原始图像对象
+              # 如果有多个缩放比例,且不是最后一个,释放原始PNG以节省内存
+              if scales.length > 1 && index < scales.length - 1
+                png = nil  # 释放原始图像对象
+                GC.start(full_mark: true, immediate_sweep: true)  # 立即触发完整垃圾回收
+              end
+            else
+              # 如果需要缩放但原始PNG已释放,从磁盘重新加载
+              if png.nil? && original_path
+                png = ChunkyPNG::Image.from_file(original_path)
+              end
+
+              next unless png  # 如果无法加载PNG,跳过此比例
+
+              # 计算新尺寸
+              factor = scale.to_i
+              new_width = png.width * factor
+              new_height = png.height * factor
+
+              # 使用ChunkyPNG调整大小
+              resized_png = png.resample_nearest_neighbor(new_width, new_height)
+
+              filename = "#{base_name}@#{scale}#{ext}"
+              path = File.join(@output_dir, filename)
+              resized_png.save(path, :fast_rgba)
+
+              # 立即释放缩放后的图像对象
+              resized_png = nil
+
+              # 如果未请求1x,使用第一个生成的缩放比例作为"基本"路径
+              saved_base_path ||= relative_path(filename)
+
+              # 每处理一个缩放比例后触发完整垃圾回收
+              GC.start(full_mark: true, immediate_sweep: true)
             end
-          else
-            # 如果需要缩放但原始PNG已释放，从磁盘重新加载
-            if png.nil?
-              original_path = File.join(@output_dir, base_filename)
-              png = ChunkyPNG::Image.from_file(original_path)
-            end
-
-            # 计算新尺寸
-            factor = scale.to_i
-            new_width = png.width * factor
-            new_height = png.height * factor
-
-            # 使用ChunkyPNG调整大小
-            # 注意: psd.to_png返回ChunkyPNG::Image
-            resized_png = png.resample_nearest_neighbor(new_width, new_height)
-
-            filename = "#{base_name}@#{scale}#{ext}"
-            path = File.join(@output_dir, filename)
-            resized_png.save(path, :fast_rgba)
-
-            # 立即释放缩放后的图像对象
-            resized_png = nil
-
-            # 如果未请求1x，我们仍需要基本路径用于预览
-            # 如果未设置，使用第一个生成的缩放比例作为"基本"路径
-            saved_base_path ||= relative_path(filename)
+          rescue => e
+            puts "保存缩放图像 #{base_filename} 在比例 #{scale} 时出错: #{e.message}"
+            # 继续处理其他比例
           end
-        rescue => e
-          puts "保存缩放图像 #{base_filename} 在比例 #{scale} 时出错: #{e.message}"
-          # 继续处理其他比例
         end
       end
+    ensure
+      # 确保所有PNG对象都被释放
+      png = nil
+      GC.start(full_mark: true, immediate_sweep: true)
     end
 
     saved_base_path
