@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Tabs, Card, Checkbox, Button, message, Select, Space, Input, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { DownOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { DownOutlined, EyeInvisibleOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useAtom } from 'jotai';
 import ExportConfigButton from '../ExportConfigButton';
 import RenameExportModal from './RenameExportModal';
 import { debounce } from 'lodash';
-import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, hoverLayerIdAtom } from '../../store/atoms';
+import { layersAtom, scannerPositionAtom, selectedLayerIdsAtom, projectAtom, globalLoadingAtom, hoverLayerIdAtom, filterViewModeAtom } from '../../store/atoms';
 import client from '../../api/client';
 import { IMAGE_BASE_URL } from '../../config';
+import type { Layer } from '../../types';
 
 const { TabPane } = Tabs;
 
@@ -19,6 +20,7 @@ const FilterList: React.FC = () => {
     const [selectedLayerIds, setSelectedLayerIds] = useAtom(selectedLayerIdsAtom);
     const [hoverLayerId, setHoverLayerId] = useAtom(hoverLayerIdAtom);
     const [, setGlobalLoading] = useAtom(globalLoadingAtom);
+    const [viewMode, setViewMode] = useAtom(filterViewModeAtom);
     const [activeTab, setActiveTab] = useState('all');
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [sizeFilter, setSizeFilter] = useState<string[]>([]);
@@ -27,6 +29,32 @@ const FilterList: React.FC = () => {
     const [nameFilter, setNameFilter] = useState('');
     const [renameModalVisible, setRenameModalVisible] = useState(false);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 树视图辅助函数
+    const groupLayersByY = useCallback((layers: Layer[], tolerance = 10): Layer[][] => {
+        const sorted = [...layers].sort((a, b) => a.y - b.y);
+        const groups: Layer[][] = [];
+
+        sorted.forEach(layer => {
+            const lastGroup = groups[groups.length - 1];
+            if (!lastGroup || Math.abs(layer.y - lastGroup[0].y) > tolerance) {
+                groups.push([layer]);
+            } else {
+                lastGroup.push(layer);
+            }
+        });
+
+        return groups;
+    }, []);
+
+    const calculateIndentLevel = useCallback((layer: Layer, maxWidth: number): number => {
+        const widthRatio = layer.width / maxWidth;
+
+        if (widthRatio < 0.3) return 3;
+        if (widthRatio < 0.5) return 2;
+        if (widthRatio < 0.8) return 1;
+        return 0;
+    }, []);
 
     // Filter logic based on Scanner Position
     // scannerY 已经是换算后的图片坐标位置
@@ -257,6 +285,22 @@ const FilterList: React.FC = () => {
                         </Select>
                     </div>
                     <Space>
+                        <Space size="small">
+                            <Button
+                                type={viewMode === 'list' ? 'primary' : 'default'}
+                                size="small"
+                                icon={<AppstoreOutlined />}
+                                onClick={() => setViewMode('list')}
+                                title="列表视图"
+                            />
+                            <Button
+                                type={viewMode === 'tree' ? 'primary' : 'default'}
+                                size="small"
+                                icon={<UnorderedListOutlined />}
+                                onClick={() => setViewMode('tree')}
+                                title="树视图"
+                            />
+                        </Space>
                         <ExportConfigButton
                             value={exportScales}
                             onChange={setExportScales}
@@ -297,79 +341,130 @@ const FilterList: React.FC = () => {
                 layers={selectedLayers}
             />
 
-            <div className="list-content">
-                {filteredLayers.map(layer => (
-                    <Card
-                        key={layer.id}
-                        hoverable
-                        className="layer-card"
-                        style={{
-                            border: selectedLayerIds.includes(layer.id)
-                                ? '2px solid #1890ff'
-                                : hoverLayerId === layer.id
-                                    ? '2px solid #52c41a'
-                                    : `1px solid var(--border-color)`,
-                            background: 'var(--card-bg)'
-                        }}
-                        onMouseEnter={() => handleMouseEnter(layer.id)}
-                        onMouseLeave={handleMouseLeave}
-                        cover={
-                            <div
-                                className="cover"
-                                onClick={() => toggleSelection(layer.id)}
-                                style={{
-                                    position: 'relative',
-                                    opacity: layer.hidden ? 0.6 : 1,
-                                    filter: layer.hidden ? 'grayscale(30%)' : 'none'
-                                }}
-                            >
-                                {layer.hidden && (
-                                    <span style={{
-                                        position: 'absolute',
-                                        top: 4,
-                                        left: 4,
-                                        fontSize: '20px',
-                                        zIndex: 2,
-                                        textShadow: '0 0 3px rgba(255,255,255,0.8)'
-                                    }}>
-                                        <EyeInvisibleOutlined />
-                                    </span>
-                                )}
-                                {layer.hidden && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        backgroundColor: 'rgba(128, 128, 128, 0.2)',
-                                        zIndex: 1
-                                    }} />
-                                )}
-                                {layer.image_path ? (
-                                    <img
-                                        alt={layer.name}
-                                        src={`${IMAGE_BASE_URL}/${layer.image_path}`}
-                                    />
-                                ) : (
-                                    <span style={{ color: 'var(--text-secondary)' }}>无图片</span>
-                                )}
-                            </div>
+            {viewMode === 'list' ? (
+                <div className="list-content">
+                    {filteredLayers.map(layer => (
+                        <Card
+                            key={layer.id}
+                            hoverable
+                            className="layer-card"
+                            style={{
+                                border: selectedLayerIds.includes(layer.id)
+                                    ? '2px solid #1890ff'
+                                    : hoverLayerId === layer.id
+                                        ? '2px solid #52c41a'
+                                        : `1px solid var(--border-color)`,
+                                background: 'var(--card-bg)'
+                            }}
+                            onMouseEnter={() => handleMouseEnter(layer.id)}
+                            onMouseLeave={handleMouseLeave}
+                            cover={
+                                <div
+                                    className="cover"
+                                    onClick={() => toggleSelection(layer.id)}
+                                    style={{
+                                        position: 'relative',
+                                        opacity: layer.hidden ? 0.6 : 1,
+                                        filter: layer.hidden ? 'grayscale(30%)' : 'none'
+                                    }}
+                                >
+                                    {layer.hidden && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: 4,
+                                            left: 4,
+                                            fontSize: '20px',
+                                            zIndex: 2,
+                                            textShadow: '0 0 3px rgba(255,255,255,0.8)'
+                                        }}>
+                                            <EyeInvisibleOutlined />
+                                        </span>
+                                    )}
+                                    {layer.hidden && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                                            zIndex: 1
+                                        }} />
+                                    )}
+                                    {layer.image_path ? (
+                                        <img
+                                            alt={layer.name}
+                                            src={`${IMAGE_BASE_URL}/${layer.image_path}`}
+                                        />
+                                    ) : (
+                                        <span style={{ color: 'var(--text-secondary)' }}>无图片</span>
+                                    )}
+                                </div>
+                            }
+                        >
+                            <Card.Meta
+                                title={layer.name}
+                                description={`${layer.width}x${layer.height}`}
+                            />
+                            <Checkbox
+                                className="checkbox"
+                                checked={selectedLayerIds.includes(layer.id)}
+                                onChange={() => toggleSelection(layer.id)}
+                            />
+                        </Card>
+                    ))}
+                    {filteredLayers.length === 0 && <div style={{ padding: 20, color: 'var(--text-secondary)' }}>在此扫描位置未找到图层。请滚动顶部视图！</div>}
+                </div>
+            ) : (
+                <div className="tree-content">
+                    {(() => {
+                        if (filteredLayers.length === 0) {
+                            return <div style={{ padding: 20, color: 'var(--text-secondary)' }}>在此扫描位置未找到图层。请滚动顶部视图！</div>;
                         }
-                    >
-                        <Card.Meta
-                            title={layer.name}
-                            description={`${layer.width}x${layer.height}`}
-                        />
-                        <Checkbox
-                            className="checkbox"
-                            checked={selectedLayerIds.includes(layer.id)}
-                            onChange={() => toggleSelection(layer.id)}
-                        />
-                    </Card>
-                ))}
-                {filteredLayers.length === 0 && <div style={{ padding: 20, color: 'var(--text-secondary)' }}>在此扫描位置未找到图层。请滚动顶部视图！</div>}
-            </div>
+
+                        const maxWidth = Math.max(...filteredLayers.map(l => l.width));
+                        const groupedLayers = groupLayersByY(filteredLayers);
+
+                        return groupedLayers.flatMap(group => {
+                            const sortedGroup = [...group].sort((a, b) => a.x - b.x);
+                            return sortedGroup.map(layer => (
+                                <div
+                                    key={layer.id}
+                                    className="tree-view-item"
+                                    style={{
+                                        paddingLeft: `${calculateIndentLevel(layer, maxWidth) * 20 + 8}px`,
+                                        backgroundColor: selectedLayerIds.includes(layer.id) ? 'rgba(24, 144, 255, 0.1)' : 'transparent',
+                                        border: hoverLayerId === layer.id ? '1px solid #52c41a' : '1px solid transparent'
+                                    }}
+                                    onClick={() => toggleSelection(layer.id)}
+                                    onMouseEnter={() => handleMouseEnter(layer.id)}
+                                    onMouseLeave={handleMouseLeave}
+                                >
+                                    <Checkbox
+                                        checked={selectedLayerIds.includes(layer.id)}
+                                        onChange={() => toggleSelection(layer.id)}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                    {layer.image_path ? (
+                                        <img
+                                            src={`${IMAGE_BASE_URL}/${layer.image_path}`}
+                                            alt={layer.name}
+                                            className="tree-view-thumbnail"
+                                        />
+                                    ) : (
+                                        <div className="tree-view-thumbnail" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>无</div>
+                                    )}
+                                    {layer.hidden && (
+                                        <EyeInvisibleOutlined style={{ color: 'var(--text-secondary)', fontSize: 14 }} />
+                                    )}
+                                    <span className="tree-view-name">{layer.name}</span>
+                                    <span className="tree-view-size">{layer.width}×{layer.height}</span>
+                                </div>
+                            ));
+                        });
+                    })()}
+                </div>
+            )}
         </div>
     );
 };

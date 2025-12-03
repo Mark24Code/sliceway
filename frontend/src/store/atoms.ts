@@ -15,3 +15,6 @@ export const previewZoomAtom = atom<number>(0.5); // 1 = 100%, 0.75 = 75%, 0.5 =
 
 // 布局模式管理：'horizontal' 左右布局，'vertical' 上下布局
 export const layoutModeAtom = atom<'horizontal' | 'vertical'>('horizontal');
+
+// 筛选视图模式管理：'list' 列表视图，'tree' 树视图
+export const filterViewModeAtom = atom<'list' | 'tree'>('list');
