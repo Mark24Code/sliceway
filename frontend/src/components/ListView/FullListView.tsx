@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Table, Button, Input, Space, message, Select } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useAtom } from 'jotai';
@@ -22,6 +22,10 @@ const FullListView: React.FC = () => {
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
+
+    // 分页状态
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     // 图片预览模态框状态
     const [previewVisible, setPreviewVisible] = useState(false);
@@ -67,6 +71,20 @@ const FullListView: React.FC = () => {
         }, 500),
         [handleExport]
     );
+
+    // 分页改变处理
+    const handlePageChange = useCallback((page: number, newPageSize: number) => {
+        setCurrentPage(page);
+        if (newPageSize !== pageSize) {
+            setPageSize(newPageSize);
+            setCurrentPage(1); // 改变每页条数时重置到第一页
+        }
+    }, [pageSize]);
+
+    // 筛选条件改变时重置到第一页
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchText, typeFilter, sizeFilter, ratioFilter]);
 
     const filteredLayers = layers.filter(l => {
         // Search Filter
@@ -260,7 +278,17 @@ const FullListView: React.FC = () => {
                 dataSource={filteredLayers}
                 columns={columns}
                 rowKey="id"
-                pagination={{ pageSize: 20 }}
+                pagination={{
+                    current: currentPage,
+                    pageSize: pageSize,
+                    total: filteredLayers.length,
+                    showTotal: (total) => `共 ${total} 条数据`,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                    onChange: handlePageChange,
+                    onShowSizeChange: handlePageChange
+                }}
             />
 
             {/* 图片预览模态框 */}
