@@ -25,7 +25,7 @@ body {
   }
 
   .scanner-section {
-    flex: 1 1 0; // Give more space to scanner section
+    flex: 1 1 50%; // 上下布局时占 50%
     overflow: hidden;
     border-bottom: 1px solid #ddd;
     position: relative;

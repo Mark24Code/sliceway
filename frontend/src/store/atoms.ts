@@ -12,3 +12,6 @@ export const globalLoadingAtom = atom<boolean>(false);
 
 // 预览缩放状态管理
 export const previewZoomAtom = atom<number>(0.5); // 1 = 100%, 0.75 = 75%, 0.5 = 50% (默认 50%)
+
+// 布局模式管理：'horizontal' 左右布局，'vertical' 上下布局
+export const layoutModeAtom = atom<'horizontal' | 'vertical'>('horizontal');
