@@ -83,75 +83,89 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       title="图片预览"
       open={visible}
       onCancel={handleClose}
-      footer={[
-        <Button key="zoom-in" onClick={() => handleZoom('in')}>
-          放大
-        </Button>,
-        <Button key="zoom-out" onClick={() => handleZoom('out')}>
-          缩小
-        </Button>,
-        <Button key="fullscreen" onClick={() => setIsFullscreen(!isFullscreen)}>
-          {isFullscreen ? '退出全屏' : '全屏'}
-        </Button>,
-        <Button key="download" onClick={handleDownload}>
-          下载
-        </Button>,
-        <Button key="close" onClick={handleClose}>
-          关闭
-        </Button>
-      ]}
-      width={isFullscreen ? '100vw' : 800}
+      footer={null}
+      width={isFullscreen ? '100vw' : 900}
       style={isFullscreen ? { top: 0, margin: 0, maxWidth: '100vw' } : {}}
       className={isFullscreen ? 'preview-image-modal fullscreen' : 'preview-image-modal'}
     >
-      <div style={{
-        textAlign: 'center',
-        height: isFullscreen ? 'calc(100vh - 108px)' : 'auto',
-        overflow: 'auto',
-        backgroundColor: '#f5f5f5',
-        backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
-        backgroundSize: '20px 20px',
-        backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-        padding: isFullscreen ? 0 : 16
-      }}>
-        <img
-          ref={imageRef}
-          src={imageUrl}
-          alt={alt}
+      {/* 顶部图层信息 */}
+      {layerInfo && !isFullscreen && (
+        <div
           style={{
-            maxWidth: isFullscreen ? '100%' : '100%',
-            maxHeight: isFullscreen ? '100%' : '600px',
-            transform: `scale(${zoomLevel})`,
-            transition: 'transform 0.3s ease',
-            cursor: zoomLevel > 1 ? 'grab' : 'default',
-            border: '1px solid #ddd',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            marginBottom: '16px',
+            padding: '12px 16px',
+            background: 'var(--card-bg)',
+            borderRadius: '6px',
+            border: '1px solid var(--border-color)',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            color: 'var(--text-primary)'
           }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        />
-        {layerInfo && !isFullscreen && (
-          <div
-            style={{
-              marginTop: '16px',
-              padding: '12px 16px',
-              background: 'white',
-              borderRadius: '6px',
-              border: '1px solid #e8e8e8',
-              fontSize: '14px',
-              lineHeight: '1.5',
-              textAlign: 'left'
-            }}
-          >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-              <div><strong>ID:</strong> {layerInfo.id}</div>
-              <div><strong>名称:</strong> {layerInfo.name}</div>
-              <div><strong>类型:</strong> {layerInfo.layer_type}</div>
-              <div><strong>尺寸:</strong> {layerInfo.width}×{layerInfo.height}</div>
-            </div>
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            <div><strong>ID:</strong> {layerInfo.id}</div>
+            <div><strong>名称:</strong> {layerInfo.name}</div>
+            <div><strong>类型:</strong> {layerInfo.layer_type}</div>
+            <div><strong>尺寸:</strong> {layerInfo.width}×{layerInfo.height}</div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* 图片和按钮区域 */}
+      <div style={{ display: 'flex', gap: '16px', height: isFullscreen ? 'calc(100vh - 108px)' : 'auto' }}>
+        {/* 左侧图片区域 */}
+        <div
+          className="checkerboard-bg"
+          style={{
+            flex: 1,
+            textAlign: 'center',
+            overflow: 'auto',
+            padding: 16,
+            minHeight: isFullscreen ? 'auto' : '400px'
+          }}
+        >
+          <img
+            ref={imageRef}
+            src={imageUrl}
+            alt={alt}
+            style={{
+              maxWidth: '100%',
+              maxHeight: isFullscreen ? '100%' : '600px',
+              transform: `scale(${zoomLevel})`,
+              transition: 'transform 0.3s ease',
+              cursor: zoomLevel > 1 ? 'grab' : 'default',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-md)'
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+          />
+        </div>
+
+        {/* 右侧按钮区域 */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          minWidth: '100px'
+        }}>
+          <Button onClick={() => handleZoom('in')} block>
+            放大
+          </Button>
+          <Button onClick={() => handleZoom('out')} block>
+            缩小
+          </Button>
+          <Button onClick={() => setIsFullscreen(!isFullscreen)} block>
+            {isFullscreen ? '退出全屏' : '全屏'}
+          </Button>
+          <Button onClick={handleDownload} block>
+            下载
+          </Button>
+          <Button onClick={handleClose} type="primary" block>
+            关闭
+          </Button>
+        </div>
       </div>
     </Modal>
   );

@@ -2,6 +2,8 @@
     padding: 24px;
     max-width: 1200px;
     margin: 0 auto;
+    background-color: var(--bg-secondary);
+    min-height: 100vh;
 
     &__header {
         text-align: center;
@@ -32,10 +34,10 @@
 
     &__card {
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-md);
         transition: all 0.3s ease;
-        border: 1px solid #e8e8e8;
-        background: white;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
 
         &:hover {
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -44,7 +46,7 @@
 
         .ant-card-head {
             border-bottom: 2px solid #FFD100;
-            background: white;
+            background: var(--card-bg);
 
             .ant-card-head-title {
                 font-size: 1.3rem;
@@ -55,7 +57,8 @@
 
         .ant-card-body {
             padding: 24px;
-            background: white;
+            background: var(--card-bg);
+            color: var(--text-primary);
         }
     }
 
@@ -63,12 +66,12 @@
         text-align: center;
         padding: 20px;
         border-radius: 8px;
-        background: #f8f9fa;
+        background: var(--bg-tertiary);
         transition: all 0.3s ease;
-        border: 1px solid #e8e8e8;
+        border: 1px solid var(--border-color);
 
         &:hover {
-            background: #e9ecef;
+            background: var(--bg-hover);
             transform: translateY(-2px);
         }
 
@@ -79,7 +82,7 @@
         }
 
         p {
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 0 !important;
             line-height: 1.6;
         }
@@ -88,9 +91,10 @@
     &__footer {
         margin-top: 40px;
         padding: 20px 0;
-        border-top: 1px solid #e8e8e8;
+        border-top: 1px solid var(--border-color);
         text-align: center;
-        background: white;
+        background: var(--card-bg);
+        color: var(--text-primary);
     }
 
     // 按钮样式调整

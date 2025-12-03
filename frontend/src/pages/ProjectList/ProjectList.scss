@@ -1,6 +1,8 @@
 // ProjectList 页面样式
 .project-list {
   padding: 24px;
+  background-color: var(--bg-secondary);
+  min-height: 100vh;
 
   &__header {
     margin-bottom: 16px;
@@ -12,7 +14,7 @@
       margin: 0;
       font-size: 24px;
       font-weight: 600;
-      color: #262626;
+      color: var(--text-primary);
     }
 
     &-actions {
@@ -22,19 +24,26 @@
   }
 
   &__table {
-    background: #fff;
+    background: var(--card-bg);
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
 
     .ant-table-thead > tr > th {
-      background: #fafafa;
+      background: var(--bg-tertiary);
       font-weight: 600;
-      color: #262626;
+      color: var(--text-primary);
     }
 
     .ant-table-tbody > tr:hover > td {
-      background: #f5f5f5;
+      background: var(--bg-hover);
     }
+  }
+
+  &__filters {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--filter-bg);
+    border-radius: 6px;
   }
 
   &__modal {
@@ -44,13 +53,13 @@
 
     .ant-form-item-label > label {
       font-weight: 500;
-      color: #262626;
+      color: var(--text-primary);
     }
 
     .ant-upload-drag {
-      border: 2px dashed #d9d9d9;
+      border: 2px dashed var(--border-color);
       border-radius: 8px;
-      background: #fafafa;
+      background: var(--bg-tertiary);
       transition: all 0.3s;
 
       &:hover {
@@ -69,12 +78,12 @@
 
       .ant-upload-text {
         font-size: 16px;
-        color: #262626;
+        color: var(--text-primary);
         margin-bottom: 8px;
       }
 
       .ant-upload-hint {
-        color: #8c8c8c;
+        color: var(--text-secondary);
         font-size: 14px;
       }
     }
@@ -100,12 +109,12 @@
   }
 
   &__project-link {
-    color: #1890ff;
+    color: var(--text-link);
     cursor: pointer;
     font-weight: 500;
 
     &:hover {
-      color: #40a9ff;
+      color: var(--text-link-hover);
       text-decoration: underline;
     }
   }
@@ -122,25 +131,25 @@
     border-radius: 50%;
 
     &--pending {
-      background-color: #8c8c8c; // 灰色 - 初始状态
+      background-color: var(--status-pending);
     }
 
     &--processing {
-      background-color: #fc9403; // 黄色 - 处理中
+      background-color: var(--status-processing);
     }
 
     &--ready {
-      background-color: #52c41a; // 绿色 - 处理完成
+      background-color: var(--status-ready);
     }
 
     &--error {
-      background-color: #ff4d4f; // 红色 - 处理失败
+      background-color: var(--status-error);
     }
   }
 
   &__status-text {
     font-size: 14px;
-    color: #262626;
+    color: var(--text-primary);
   }
 
   &__filter-form {
@@ -154,7 +163,7 @@
 
       .ant-form-item-label > label {
         font-weight: 500;
-        color: #262626;
+        color: var(--text-primary);
       }
     }
   }

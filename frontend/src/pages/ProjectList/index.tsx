@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Table, Button, Modal, Form, Input, Upload, message, Tag, Select, DatePicker, Space, Tooltip, Descriptions, Typography } from 'antd';
-import { InboxOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { InboxOutlined, PlusOutlined, QuestionCircleOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
 import FolderSelector from '../../components/FolderSelector';
 import { useNavigate } from 'react-router-dom';
 import { useAtom } from 'jotai';
@@ -10,6 +10,7 @@ import { globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Project } from '../../types';
 import { truncatePathFromStart } from '../../utils/string';
+import { useTheme } from '../../contexts/ThemeContext';
 import './ProjectList.scss';
 
 const { Dragger } = Upload;
@@ -21,6 +22,7 @@ const ProjectList: React.FC = () => {
     const [form] = Form.useForm();
     const navigate = useNavigate();
     const [, setGlobalLoading] = useAtom(globalLoadingAtom);
+    const { theme, toggleTheme } = useTheme();
 
     // 筛选状态
     const [nameFilter, setNameFilter] = useState('');
@@ -425,6 +427,12 @@ const ProjectList: React.FC = () => {
                 <h1 className="project-list__header-title">项目列表</h1>
                 <div className="project-list__header-actions">
                     <Button
+                        icon={theme === 'dark' ? <BulbFilled /> : <BulbOutlined />}
+                        onClick={toggleTheme}
+                    >
+                        {theme === 'dark' ? '浅色模式' : '深色模式'}
+                    </Button>
+                    <Button
                         icon={<QuestionCircleOutlined />}
                         onClick={() => navigate('/about')}
                     >
@@ -448,7 +456,7 @@ const ProjectList: React.FC = () => {
             </div>
 
             {/* 筛选表单 */}
-            <div className="project-list__filters" style={{ marginBottom: 16, padding: 16, background: '#fafafa', borderRadius: 6 }}>
+            <div className="project-list__filters">
                 <Form layout="inline" className="project-list__filter-form">
                     <Form.Item label="项目名称">
                         <Input

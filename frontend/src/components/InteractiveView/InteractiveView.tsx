@@ -4,10 +4,13 @@ import ScannerPreview from './ScannerPreview';
 import FilterList from './FilterList';
 import DetailPanel from './DetailPanel';
 import PreviewControls from './PreviewControls';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { Content, Sider } = Layout;
 
 const InteractiveView: React.FC = () => {
+    const { theme } = useTheme();
+
     return (
         <Layout className="interactive-view-container">
             <Layout>
@@ -21,7 +24,14 @@ const InteractiveView: React.FC = () => {
                     </div>
                 </Content>
             </Layout>
-            <Sider width={300} theme="light" style={{ borderLeft: '1px solid #ddd' }}>
+            <Sider
+                width={300}
+                theme={theme === 'dark' ? 'dark' : 'light'}
+                style={{
+                    borderLeft: `1px solid ${theme === 'dark' ? '#303030' : '#ddd'}`,
+                    background: theme === 'dark' ? '#141414' : '#fff'
+                }}
+            >
                 <DetailPanel />
             </Sider>
         </Layout>

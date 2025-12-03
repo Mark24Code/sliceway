@@ -1,6 +1,7 @@
 // ProjectDetail 页面样式
 .project-detail {
   min-height: 100vh;
+  background-color: var(--bg-secondary);
 
   // Logo 区域
   .project-detail__logo-area {
@@ -8,8 +9,8 @@
     justify-content: center;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #f0f0f0;
-    background: #fafafa;
+    border-bottom: 1px solid var(--border-color-light);
+    background: var(--bg-tertiary);
 
     .project-detail__logo {
       height: 40px;
@@ -20,7 +21,7 @@
   // 返回按钮区域
   .project-detail__back-section {
     padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color-light);
 
     .project-detail__back-btn {
       width: 100%;
@@ -28,6 +29,7 @@
       padding: 8px 12px;
       border-radius: 6px;
       transition: all 0.2s ease;
+      color: var(--text-primary);
 
       &:hover {
         background: #f0f8ff;
@@ -39,7 +41,12 @@
   .project-detail__layout-title {
     padding: 20px;
     margin-bottom: 20px;
-    border-bottom: 1px solid #d9d9d9;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+
+    h3 {
+      color: var(--text-primary);
+    }
   }
 
   &__loading {
@@ -55,22 +62,22 @@
     align-items: center;
     height: 100vh;
     font-size: 16px;
-    color: #8c8c8c;
+    color: var(--text-secondary);
   }
 
   &__layout {
     .ant-layout-sider {
-      background: #fff;
-      border-right: 1px solid #f0f0f0;
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+      background: var(--card-bg);
+      border-right: 1px solid var(--border-color-light);
+      box-shadow: var(--shadow-md);
       z-index: 99;
       &-title {
         padding: 16px;
         font-weight: 600;
         font-size: 16px;
-        color: #262626;
-        border-bottom: 1px solid #f0f0f0;
-        background: #fafafa;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color-light);
+        background: var(--bg-tertiary);
       }
 
       .ant-menu {
@@ -83,17 +90,17 @@
           line-height: 40px;
 
           &:hover {
-            background: #f0f8ff;
-            color: #1890ff;
+            background: var(--menu-hover-bg);
+            color: var(--menu-active-color);
           }
 
           &.ant-menu-item-selected {
-            background: #e6f7ff;
-            color: #1890ff;
+            background: var(--menu-active-bg);
+            color: var(--menu-active-color);
             font-weight: 500;
 
             &::after {
-              border-right: 3px solid #1890ff;
+              border-right: 3px solid var(--menu-active-color);
             }
           }
 
@@ -108,16 +115,16 @@
       padding: 0;
       height: 100vh;
       overflow: hidden;
-      background: #f5f5f5;
+      background: var(--bg-secondary);
     }
   }
 
   &__view-container {
     height: 100%;
-    background: #fff;
+    background: var(--card-bg);
     border-radius: 8px;
     margin: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
 
     &--list {
@@ -131,20 +138,20 @@
 
   &__header {
     padding: 16px 24px;
-    border-bottom: 1px solid #f0f0f0;
-    background: #fff;
+    border-bottom: 1px solid var(--border-color-light);
+    background: var(--card-bg);
 
     &-title {
       margin: 0;
       font-size: 20px;
       font-weight: 600;
-      color: #262626;
+      color: var(--text-primary);
     }
 
     &-subtitle {
       margin: 4px 0 0 0;
       font-size: 14px;
-      color: #8c8c8c;
+      color: var(--text-secondary);
     }
   }
 
@@ -167,12 +174,12 @@
     align-items: center;
     justify-content: center;
     height: 300px;
-    color: #8c8c8c;
+    color: var(--text-secondary);
 
     &-icon {
       font-size: 48px;
       margin-bottom: 16px;
-      color: #d9d9d9;
+      color: var(--border-color);
     }
 
     &-text {
@@ -217,22 +224,22 @@
     margin-bottom: 24px;
 
     &-card {
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 8px;
       padding: 16px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
       border-left: 4px solid #1890ff;
 
       &-title {
         font-size: 14px;
-        color: #8c8c8c;
+        color: var(--text-secondary);
         margin-bottom: 8px;
       }
 
       &-value {
         font-size: 24px;
         font-weight: 600;
-        color: #262626;
+        color: var(--text-primary);
       }
 
       &--slices {
@@ -321,7 +328,7 @@
   .ant-modal-body {
     padding: 0;
     text-align: center;
-    background: #f5f5f5;
+    background: var(--scanner-bg);
     overflow: auto;
   }
 
@@ -348,75 +355,6 @@
     .zoom-controls {
       display: flex;
       gap: 8px;
-    }
-  }
-}
-
-// 暗色主题支持
-@media (prefers-color-scheme: dark) {
-  .project-detail {
-    &__layout {
-      .ant-layout-sider {
-        background: #141414;
-        border-right-color: #303030;
-
-        &-title {
-          background: #1f1f1f;
-          color: #fff;
-          border-bottom-color: #303030;
-        }
-
-        .ant-menu {
-          background: #141414;
-
-          .ant-menu-item {
-            color: #fff;
-
-            &:hover {
-              background: #177ddc;
-              color: #fff;
-            }
-
-            &.ant-menu-item-selected {
-              background: #177ddc;
-              color: #fff;
-            }
-          }
-        }
-      }
-
-      .ant-layout-content {
-        background: #000;
-      }
-    }
-
-    &__view-container {
-      background: #141414;
-    }
-
-    &__header {
-      background: #141414;
-      border-bottom-color: #303030;
-
-      &-title {
-        color: #fff;
-      }
-
-      &-subtitle {
-        color: #8c8c8c;
-      }
-    }
-
-    &__stats-card {
-      background: #1f1f1f;
-
-      &-title {
-        color: #8c8c8c;
-      }
-
-      &-value {
-        color: #fff;
-      }
     }
   }
 }

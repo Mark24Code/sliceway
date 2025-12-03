@@ -1,0 +1,77 @@
+// Theme color variables
+:root {
+  // Light theme colors (default)
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #fafafa;
+  --bg-hover: #f5f5f5;
+
+  --text-primary: #262626;
+  --text-secondary: #8c8c8c;
+  --text-link: #1890ff;
+  --text-link-hover: #40a9ff;
+
+  --border-color: #d9d9d9;
+  --border-color-light: #eee;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  --card-bg: #ffffff;
+  --filter-bg: #fafafa;
+  --scanner-bg: #f0f2f5;
+
+  --status-pending: #8c8c8c;
+  --status-processing: #fc9403;
+  --status-ready: #52c41a;
+  --status-error: #ff4d4f;
+
+  --checkerboard-color: #f0f0f0;
+
+  // Menu active state
+  --menu-active-bg: #e6f7ff;
+  --menu-active-color: #1890ff;
+  --menu-hover-bg: #f0f8ff;
+}
+
+// Dark theme colors
+[data-theme='dark'] {
+  --bg-primary: #1f1f1f;
+  --bg-secondary: #141414;
+  --bg-tertiary: #262626;
+  --bg-hover: #2a2a2a;
+
+  --text-primary: #ffffff;
+  --text-secondary: #a6a6a6;
+  --text-link: #1890ff;
+  --text-link-hover: #40a9ff;
+
+  --border-color: #434343;
+  --border-color-light: #303030;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+
+  --card-bg: #2a2a2a;
+  --filter-bg: #262626;
+  --scanner-bg: #1a1a1a;
+
+  --status-pending: #8c8c8c;
+  --status-processing: #fc9403;
+  --status-ready: #52c41a;
+  --status-error: #ff4d4f;
+
+  --checkerboard-color: #333333;
+
+  // Menu active state for dark mode
+  --menu-active-bg: #177ddc;
+  --menu-active-color: #ffffff;
+  --menu-hover-bg: rgba(23, 125, 220, 0.2);
+}
+
+// Apply theme colors to body
+body {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}

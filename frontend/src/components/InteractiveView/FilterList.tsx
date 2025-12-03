@@ -274,7 +274,8 @@ const FilterList: React.FC = () => {
                                 ? '2px solid #1890ff'
                                 : hoverLayerId === layer.id
                                     ? '2px solid #52c41a'
-                                    : undefined
+                                    : `1px solid var(--border-color)`,
+                            background: 'var(--card-bg)'
                         }}
                         onMouseEnter={() => handleMouseEnter(layer.id)}
                         onMouseLeave={handleMouseLeave}
@@ -289,7 +290,7 @@ const FilterList: React.FC = () => {
                                         src={`${IMAGE_BASE_URL}/${layer.image_path}`}
                                     />
                                 ) : (
-                                    <span>无图片</span>
+                                    <span style={{ color: 'var(--text-secondary)' }}>无图片</span>
                                 )}
                             </div>
                         }
@@ -305,7 +306,7 @@ const FilterList: React.FC = () => {
                         />
                     </Card>
                 ))}
-                {filteredLayers.length === 0 && <div style={{ padding: 20, color: '#999' }}>在此扫描位置未找到图层。请滚动顶部视图！</div>}
+                {filteredLayers.length === 0 && <div style={{ padding: 20, color: 'var(--text-secondary)' }}>在此扫描位置未找到图层。请滚动顶部视图！</div>}
             </div>
         </div>
     );

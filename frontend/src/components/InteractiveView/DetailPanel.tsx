@@ -88,10 +88,10 @@ const DetailPanel: React.FC = () => {
     }, [layer, previewVisible]);
 
     if (!layer) {
-        return <div style={{ transform: 'translateY(50%)', padding: 24, color: '#999', textAlign: 'center' }}>
-            <p>鼠标悬浮在一个“图层”</p>
+        return <div style={{ transform: 'translateY(50%)', padding: 24, color: 'var(--text-secondary)', textAlign: 'center' }}>
+            <p>鼠标悬浮在一个"图层"</p>
             <p>查看详情</p>
-            <p>“空格”直接预览或关闭预览</p>
+            <p>"空格"直接预览或关闭预览</p>
         </div>;
     }
 
@@ -103,14 +103,11 @@ const DetailPanel: React.FC = () => {
             {layer.image_path && (
                 <div style={{ marginBottom: 16, textAlign: 'center' }}>
                     <div
+                        className="checkerboard-bg-small"
                         style={{
                             width: '100%',
                             maxWidth: 200,
                             height: 120,
-                            backgroundColor: '#f5f5f5',
-                            backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
-                            backgroundSize: '10px 10px',
-                            backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -128,11 +125,11 @@ const DetailPanel: React.FC = () => {
                                 maxWidth: '100%',
                                 maxHeight: '100%',
                                 objectFit: 'contain',
-                                border: '1px solid #ccc'
+                                border: '1px solid var(--border-color)'
                             }}
                         />
                     </div>
-                    <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                    <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                         点击查看大图
                     </div>
                 </div>
