@@ -141,18 +141,34 @@ export const ImagePreviewHover: React.FC<ImagePreviewHoverProps> = ({
             maxHeight: maxHeight
           }}
         >
-          <img
-            ref={imgRef}
-            src={src}
-            alt={alt}
+          <div
             style={{
-              display: 'block',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%)
+              `,
+              backgroundSize: '16px 16px',
+              backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px'
             }}
-            onLoad={handleImageLoad}
-          />
+          >
+            <img
+              ref={imgRef}
+              src={src}
+              alt={alt}
+              style={{
+                display: 'block',
+                maxWidth: maxWidth,
+                maxHeight: maxHeight,
+                objectFit: 'contain'
+              }}
+              onLoad={handleImageLoad}
+            />
+          </div>
           {layerInfo && (
             <div
               style={{
