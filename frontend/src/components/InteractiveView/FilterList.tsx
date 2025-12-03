@@ -132,8 +132,8 @@ const FilterList: React.FC = () => {
             list = list.filter(l => l.layer_type === 'group' || l.layer_type === 'text'); // Groups might have text
         }
 
-        // 按图片宽度从高到低排序
-        list = list.sort((a, b) => b.width - a.width);
+        // 按图片宽度从低到高排序
+        list = list.sort((a, b) => a.width - b.width);
 
         return list;
     }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, hiddenFilter, activeTab, nameFilter]);
@@ -306,6 +306,7 @@ const FilterList: React.FC = () => {
                             onChange={setExportScales}
                             trimTransparent={trimTransparent}
                             onTrimTransparentChange={setTrimTransparent}
+                            processingMode={project?.processing_mode}
                         />
                         <Dropdown.Button
                             type="primary"

@@ -6,7 +6,10 @@ class Project < ActiveRecord::Base
 
   def as_json(options = {})
     super(options).merge({
-      'file_size' => (psd_path && File.exist?(psd_path)) ? File.size(psd_path) : 0
+      'file_size' => (psd_path && File.exist?(psd_path)) ? File.size(psd_path) : 0,
+      'layers_count' => layers.count,
+      'processing_started_at' => processing_started_at ? processing_started_at.to_i : nil,
+      'processing_finished_at' => processing_finished_at ? processing_finished_at.to_i : nil
     })
   end
 end

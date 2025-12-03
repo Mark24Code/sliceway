@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input, Button, Tooltip, message } from 'antd';
+import { Input, Button, Tooltip, message, Space } from 'antd';
 import { FolderOpenOutlined, CloseOutlined } from '@ant-design/icons';
 import ServerFolderSelector from '../ServerFolderSelector';
 import './FolderSelector.scss';
@@ -41,7 +41,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
 
   return (
     <div className="folder-selector">
-      <Input.Group compact className="folder-selector__group">
+      <Space.Compact className="folder-selector__group" style={{ width: '100%' }}>
         <Input
           className="folder-selector__input"
           value={value}
@@ -68,7 +68,7 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
             />
           </Tooltip>
         )}
-      </Input.Group>
+      </Space.Compact>
 
       <ServerFolderSelector
         visible={isSelectorVisible}

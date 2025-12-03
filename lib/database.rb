@@ -41,6 +41,21 @@ unless ActiveRecord::Base.connection.column_exists?(:projects, :trim_transparent
   ActiveRecord::Base.connection.add_column :projects, :trim_transparent, :boolean, default: false
 end
 
+# Add processing_mode column if it doesn't exist (for existing databases)
+unless ActiveRecord::Base.connection.column_exists?(:projects, :processing_mode)
+  ActiveRecord::Base.connection.add_column :projects, :processing_mode, :string
+end
+
+# Add processing_started_at column if it doesn't exist (for existing databases)
+unless ActiveRecord::Base.connection.column_exists?(:projects, :processing_started_at)
+  ActiveRecord::Base.connection.add_column :projects, :processing_started_at, :datetime
+end
+
+# Add processing_finished_at column if it doesn't exist (for existing databases)
+unless ActiveRecord::Base.connection.column_exists?(:projects, :processing_finished_at)
+  ActiveRecord::Base.connection.add_column :projects, :processing_finished_at, :datetime
+end
+
 unless ActiveRecord::Base.connection.table_exists?(:layers)
   ActiveRecord::Schema.define do
     create_table :layers do |t|

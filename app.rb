@@ -137,6 +137,7 @@ post '/api/projects' do
       psd_path: File.absolute_path(target_path), # Store absolute path
       export_path: export_path,
       export_scales: params[:export_scales] ? JSON.parse(params[:export_scales]) : ['1x'],
+      processing_mode: params[:processing_mode],
       status: 'pending'
     )
 
@@ -219,7 +220,7 @@ post '/api/projects/:id/stop' do
     end
 
     # 重置项目状态为初始状态
-    project.update(status: 'pending')
+    project.update(status: 'pending', processing_finished_at: Time.now)
 
     # 删除已生成的图层记录
     project.layers.destroy_all

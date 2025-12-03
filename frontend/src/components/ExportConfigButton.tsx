@@ -7,13 +7,15 @@ interface ExportConfigButtonProps {
     onChange: (value: string[]) => void;
     trimTransparent?: boolean;
     onTrimTransparentChange?: (value: boolean) => void;
+    processingMode?: 'standard' | 'aggressive';
 }
 
 const ExportConfigButton: React.FC<ExportConfigButtonProps> = ({
     value,
     onChange,
     trimTransparent = false,
-    onTrimTransparentChange
+    onTrimTransparentChange,
+    processingMode = 'standard'
 }) => {
     const [visible, setVisible] = useState(false);
     const [tempValue, setTempValue] = useState<string[]>(value);
@@ -42,7 +44,7 @@ const ExportConfigButton: React.FC<ExportConfigButtonProps> = ({
     return (
         <>
             <Button icon={<SettingOutlined />} onClick={handleOpen}>
-                导出设置 ({value.join(', ')}{trimTransparent ? ', 去透明' : ''})
+                导出设置 ({value.join(', ')}{trimTransparent && processingMode !== 'aggressive' ? ', 去透明' : ''})
             </Button>
             <Modal
                 title="导出配置"
@@ -61,17 +63,27 @@ const ExportConfigButton: React.FC<ExportConfigButtonProps> = ({
                         onChange={(vals) => setTempValue(vals as string[])}
                     />
 
-                    <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f0f0f0' }}>
-                        <Checkbox
-                            checked={tempTrimTransparent}
-                            onChange={(e) => setTempTrimTransparent(e.target.checked)}
-                        >
-                            去除透明背景
-                        </Checkbox>
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#666', marginLeft: 24 }}>
-                            自动裁剪图片周围的透明区域，保留最小尺寸
+                    {processingMode !== 'aggressive' && (
+                        <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f0f0f0' }}>
+                            <Checkbox
+                                checked={tempTrimTransparent}
+                                onChange={(e) => setTempTrimTransparent(e.target.checked)}
+                            >
+                                去除透明背景
+                            </Checkbox>
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#666', marginLeft: 24 }}>
+                                自动裁剪图片周围的透明区域，保留最小尺寸
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {processingMode === 'aggressive' && (
+                        <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f0f0f0' }}>
+                            <div style={{ fontSize: 12, color: '#999' }}>
+                                当前项目使用增强模式，图层已在处理时自动裁切透明区域
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Modal>
         </>

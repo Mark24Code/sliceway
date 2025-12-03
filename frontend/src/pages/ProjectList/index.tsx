@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Table, Button, Modal, Form, Input, Upload, message, Tag, Select, DatePicker, Space, Tooltip, Descriptions, Typography } from 'antd';
+import { Table, Button, Modal, Form, Input, Upload, message, Tag, Select, DatePicker, Space, Descriptions, Typography, Radio } from 'antd';
 import { InboxOutlined, PlusOutlined, QuestionCircleOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
 import FolderSelector from '../../components/FolderSelector';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,6 @@ import dayjs, { Dayjs } from 'dayjs';
 import { globalLoadingAtom } from '../../store/atoms';
 import client from '../../api/client';
 import type { Project } from '../../types';
-import { truncatePathFromStart } from '../../utils/string';
 import { useTheme } from '../../contexts/ThemeContext';
 import './ProjectList.scss';
 
@@ -36,6 +35,9 @@ const ProjectList: React.FC = () => {
     // 批量选择状态
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
+    // 当前时间,用于计算实时处理时长
+    const [currentTime, setCurrentTime] = useState(Date.now());
+
     const fetchProjects = async () => {
         setLoading(true);
         try {
@@ -50,13 +52,40 @@ const ProjectList: React.FC = () => {
 
     useEffect(() => {
         fetchProjects();
+
+        // 每30秒刷新项目列表
+        const refreshInterval = setInterval(() => {
+            fetchProjects();
+        }, 30000);
+
+        // 每秒更新当前时间,用于实时显示处理时长
+        const timeInterval = setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 1000);
+
+        return () => {
+            clearInterval(refreshInterval);
+            clearInterval(timeInterval);
+        };
     }, []);
 
     const handleCreate = useCallback(async (values: any) => {
+        console.log('Form values:', values); // 调试日志
+        console.log('Processing mode:', values.processing_mode); // 调试日志
+
         const formData = new FormData();
         formData.append('name', values.name);
         if (values.export_path) formData.append('export_path', values.export_path);
         if (values.export_scales) formData.append('export_scales', JSON.stringify(values.export_scales));
+
+        // processing_mode 现在是必填项
+        if (!values.processing_mode) {
+            message.error('请选择处理模式');
+            return;
+        }
+        formData.append('processing_mode', values.processing_mode);
+        console.log('Submitting processing_mode:', values.processing_mode); // 调试日志
+
         if (values.file && values.file.length > 0) {
             formData.append('file', values.file[0].originFileObj);
         } else {
@@ -80,13 +109,8 @@ const ProjectList: React.FC = () => {
         }
     }, [form, setGlobalLoading]);
 
-    // 防抖创建函数
-    const debouncedCreate = useCallback(
-        debounce((values: any) => {
-            handleCreate(values);
-        }, 500),
-        [handleCreate]
-    );
+    // 防抖创建函数 - 移除防抖，因为Modal提交不需要防抖
+    const debouncedCreate = handleCreate;
 
     const handleDelete = useCallback(async (id: number, status: string) => {
         let content = '确定要删除此项目吗？此操作将删除项目及其相关文件。';
@@ -247,6 +271,53 @@ const ProjectList: React.FC = () => {
         return statusMap[status] || 'project-list__status--default';
     };
 
+    // 格式化处理时长
+    const formatProcessingDuration = useCallback((project: Project) => {
+        if (!project.processing_started_at) {
+            return '-';
+        }
+
+        const startTime = project.processing_started_at * 1000; // 转换为毫秒
+        let endTime: number;
+
+        if (project.status === 'processing') {
+            // 正在处理中,使用当前时间
+            endTime = currentTime;
+        } else if (project.processing_finished_at) {
+            // 已完成,使用结束时间
+            endTime = project.processing_finished_at * 1000;
+        } else {
+            return '-';
+        }
+
+        const durationMs = endTime - startTime;
+        const seconds = Math.floor(durationMs / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+            return `${hours}时${minutes % 60}分${seconds % 60}秒`;
+        } else if (minutes > 0) {
+            return `${minutes}分${seconds % 60}秒`;
+        } else {
+            return `${seconds}秒`;
+        }
+    }, [currentTime]);
+
+    // 格式化Unix时间戳为本地时间
+    const formatTimestamp = (timestamp?: number) => {
+        if (!timestamp) return '-';
+        return new Date(timestamp * 1000).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+    };
+
     const handleViewDetail = useCallback((project: Project) => {
         if (!project || !project.id) {
             message.error('无效的项目数据');
@@ -330,28 +401,20 @@ const ProjectList: React.FC = () => {
             },
         },
         {
-            title: 'PSD路径',
-            dataIndex: 'psd_path',
-            key: 'psd_path',
-            render: (path: string) => path ? (
-                <Tooltip title={path} placement="topLeft">
-                    <span style={{ maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                        {truncatePathFromStart(path, 20)}
-                    </span>
-                </Tooltip>
-            ) : '-',
+            title: '图层数量',
+            dataIndex: 'layers_count',
+            key: 'layers_count',
+            render: (count: number) => count || 0,
         },
         {
-            title: '导出路径',
-            dataIndex: 'export_path',
-            key: 'export_path',
-            render: (path: string) => path ? (
-                <Tooltip title={path} placement="topLeft">
-                    <span style={{ maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                        {truncatePathFromStart(path, 20)}
-                    </span>
-                </Tooltip>
-            ) : '-',
+            title: '处理时长',
+            key: 'processing_duration',
+            render: (_: any, record: Project) => {
+                const duration = formatProcessingDuration(record);
+                return record.status === 'processing' ? (
+                    <span style={{ color: '#1890ff' }}>{duration}</span>
+                ) : duration;
+            },
         },
         {
             title: '导出倍率',
@@ -366,10 +429,16 @@ const ProjectList: React.FC = () => {
             ),
         },
         {
-            title: '创建时间',
-            dataIndex: 'created_at',
-            key: 'created_at',
-            render: (date: string) => new Date(date).toLocaleString(),
+            title: '处理模式',
+            dataIndex: 'processing_mode',
+            key: 'processing_mode',
+            render: (mode: string) => {
+                return mode === 'aggressive' ? (
+                    <Tag color="orange">增强模式</Tag>
+                ) : (
+                    <Tag color="default">标准</Tag>
+                );
+            },
         },
         {
             title: '操作',
@@ -558,6 +627,20 @@ const ProjectList: React.FC = () => {
                             <Select.Option value="4x">4x</Select.Option>
                         </Select>
                     </Form.Item>
+                    <Form.Item
+                        name="processing_mode"
+                        label="处理模式"
+                        rules={[{ required: true, message: '请选择处理模式' }]}
+                    >
+                        <Radio.Group>
+                            <Radio value="standard">标准模式</Radio>
+                            <Radio value="aggressive">增强模式</Radio>
+                        </Radio.Group>
+                    </Form.Item>
+                    <div style={{ marginTop: -16, marginBottom: 16, fontSize: 12, color: '#666', paddingLeft: 0 }}>
+                        <div>• 标准模式: 保持原始图层尺寸和位置</div>
+                        <div>• 增强模式: 自动去除透明区域,还原视觉图层尺寸（处理时间久）</div>
+                    </div>
                     <Form.Item name="file" label="PSD/PSB文件" valuePropName="fileList" getValueFromEvent={(e: any) => {
                         if (Array.isArray(e)) return e;
                         return e?.fileList;
@@ -598,6 +681,21 @@ const ProjectList: React.FC = () => {
                             >
                                 {getStatusText(currentProject.status)}
                             </Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="导出图片数量">
+                            {currentProject.layers_count || 0} 张
+                        </Descriptions.Item>
+                        <Descriptions.Item label="处理时长">
+                            {formatProcessingDuration(currentProject)}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="处理开始时间">
+                            {formatTimestamp(currentProject.processing_started_at)}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="处理结束时间">
+                            {formatTimestamp(currentProject.processing_finished_at)}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="处理模式">
+                            {currentProject.processing_mode === 'aggressive' ? '增强模式' : '标准模式'}
                         </Descriptions.Item>
                         <Descriptions.Item label="PSD文件路径">
                             <Space>

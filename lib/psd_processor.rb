@@ -41,11 +41,12 @@ class PsdProcessor
   end
 
   def call
-    @project.update(status: 'processing')
+    @project.update(status: 'processing', processing_started_at: Time.now)
 
     # 记录初始内存
     initial_memory = PerformanceMonitor.memory_usage
     puts "✓ [开始处理] PSD文件, 初始内存: #{initial_memory} MB"
+    puts "✓ [处理模式] #{@project.processing_mode == 'aggressive' ? '增强模式' : '标准模式'}"
 
     begin
       PSD.open(@project.psd_path) do |psd|
@@ -65,11 +66,11 @@ class PsdProcessor
       final_memory = PerformanceMonitor.memory_usage
       puts "✓ [完成处理] 最终内存: #{final_memory} MB, 内存增长: #{final_memory - initial_memory} MB"
 
-      @project.update(status: 'ready')
+      @project.update(status: 'ready', processing_finished_at: Time.now)
     rescue => e
       puts "✗ [处理失败] #{e.message}"
       puts e.backtrace
-      @project.update(status: 'error')
+      @project.update(status: 'error', processing_finished_at: Time.now)
     end
   end
 
@@ -195,6 +196,35 @@ class PsdProcessor
 
       return unless png
 
+      # 增强模式处理
+      x = slice.left
+      y = slice.top
+      width = slice.width
+      height = slice.height
+
+      if @project.processing_mode == 'aggressive'
+        bounds = analyze_png_bounds(png)
+
+        unless bounds[:found_opaque]
+          puts "- [跳过切片] #{slice.name}, 完全透明"
+          return  # 跳过完全透明的切片
+        end
+
+        # 裁切PNG
+        cropped_png = crop_png(png, bounds)
+        if cropped_png
+          png = cropped_png
+          # 更新坐标和尺寸
+          old_x, old_y = x, y
+          old_width, old_height = width, height
+          x += bounds[:min_x]
+          y += bounds[:min_y]
+          width = bounds[:max_x] - bounds[:min_x] + 1
+          height = bounds[:max_y] - bounds[:min_y] + 1
+          puts "  [强力裁切] #{slice.name}: (#{old_width}×#{old_height}) → (#{width}×#{height}), 偏移: (#{bounds[:min_x]}, #{bounds[:min_y]})"
+        end
+      end
+
       saved_path = save_scaled_images(png, filename)
 
       Layer.create!(
@@ -202,16 +232,16 @@ class PsdProcessor
         resource_id: slice.id.to_s,
         name: slice.name,
         layer_type: 'slice',
-        x: slice.left,
-        y: slice.top,
-        width: slice.width,
-        height: slice.height,
+        x: x,
+        y: y,
+        width: width,
+        height: height,
         image_path: saved_path,
         metadata: { scales: @project.export_scales || ['1x'] },
         hidden: hidden
       )
 
-      puts "✓ [导出切片] #{slice.name} (#{slice.width}×#{slice.height})"
+      puts "✓ [导出切片] #{slice.name} (#{width}×#{height})"
       log_memory_periodically
     rescue => e
       puts "✗ [导出切片] #{slice.name} 失败: #{e.message}"
@@ -259,18 +289,24 @@ class PsdProcessor
     }
 
     # 处理特定类型
+    result = nil
     if layer_type == 'group'
-      handle_group(node, attrs)
+      result = handle_group(node, attrs)
     elsif layer_type == 'text'
-      handle_text(node, attrs)
+      result = handle_text(node, attrs)
     else # layer
-      handle_layer(node, attrs)
+      result = handle_layer(node, attrs)
+    end
+
+    # 如果handle方法返回nil,表示跳过此图层(完全透明)
+    if result == nil && @project.processing_mode == 'aggressive'
+      return  # 不创建Layer记录,直接返回
     end
 
     # 保存记录
     record = Layer.create!(attrs)
 
-    puts "✓ [导出#{LAYER_TYPE_MAP[layer_type] || layer_type}] #{node.name} (#{node.width}×#{node.height})"
+    puts "✓ [导出#{LAYER_TYPE_MAP[layer_type] || layer_type}] #{node.name} (#{attrs[:width]}×#{attrs[:height]})"
     log_memory_periodically
 
     # 如果是组，递归处理子节点
@@ -285,9 +321,34 @@ class PsdProcessor
     # Export with text
     filename_with = "group_#{node.id}_with_text_#{SecureRandom.hex(4)}.png"
     png = nil
+    bounds = nil  # 用于存储边界信息,确保两个版本使用相同的边界
 
     begin
       png = node.to_png
+
+      # 增强模式处理 - 先分析边界
+      if @project.processing_mode == 'aggressive' && png
+        bounds = analyze_png_bounds(png)
+
+        unless bounds[:found_opaque]
+          puts "- [跳过组] #{node.name}, 完全透明"
+          return nil  # 返回nil表示跳过此图层
+        end
+
+        # 裁切PNG
+        cropped_png = crop_png(png, bounds)
+        if cropped_png
+          png = cropped_png
+          # 更新坐标和尺寸
+          old_width, old_height = attrs[:width], attrs[:height]
+          attrs[:x] += bounds[:min_x]
+          attrs[:y] += bounds[:min_y]
+          attrs[:width] = bounds[:max_x] - bounds[:min_x] + 1
+          attrs[:height] = bounds[:max_y] - bounds[:min_y] + 1
+          puts "  [强力裁切] #{node.name}(组-含文本): (#{old_width}×#{old_height}) → (#{attrs[:width]}×#{attrs[:height]}), 偏移: (#{bounds[:min_x]}, #{bounds[:min_y]})"
+        end
+      end
+
       saved_path = save_scaled_images(png, filename_with)
       attrs[:image_path] = saved_path
     rescue => e
@@ -302,6 +363,15 @@ class PsdProcessor
 
     begin
       png_without = render_group_without_text(node)
+
+      # 增强模式处理 - 使用相同的边界信息
+      if @project.processing_mode == 'aggressive' && png_without && bounds && bounds[:found_opaque]
+        cropped_png = crop_png(png_without, bounds)
+        if cropped_png
+          png_without = cropped_png
+        end
+      end
+
       saved_path = save_scaled_images(png_without, filename_without)
       attrs[:metadata][:image_path_no_text] = saved_path
     rescue => e
@@ -322,6 +392,30 @@ class PsdProcessor
 
     begin
       png = node.to_png
+
+      # 增强模式处理
+      if @project.processing_mode == 'aggressive' && png
+        bounds = analyze_png_bounds(png)
+
+        unless bounds[:found_opaque]
+          puts "- [跳过文本] #{node.name}, 完全透明"
+          return nil  # 返回nil表示跳过此图层
+        end
+
+        # 裁切PNG
+        cropped_png = crop_png(png, bounds)
+        if cropped_png
+          png = cropped_png
+          # 更新坐标和尺寸
+          old_width, old_height = attrs[:width], attrs[:height]
+          attrs[:x] += bounds[:min_x]
+          attrs[:y] += bounds[:min_y]
+          attrs[:width] = bounds[:max_x] - bounds[:min_x] + 1
+          attrs[:height] = bounds[:max_y] - bounds[:min_y] + 1
+          puts "  [强力裁切] #{node.name}(文本): (#{old_width}×#{old_height}) → (#{attrs[:width]}×#{attrs[:height]}), 偏移: (#{bounds[:min_x]}, #{bounds[:min_y]})"
+        end
+      end
+
       saved_path = save_scaled_images(png, filename)
       attrs[:image_path] = saved_path
     rescue => e
@@ -337,6 +431,30 @@ class PsdProcessor
 
     begin
       png = node.to_png
+
+      # 增强模式处理
+      if @project.processing_mode == 'aggressive' && png
+        bounds = analyze_png_bounds(png)
+
+        unless bounds[:found_opaque]
+          puts "- [跳过图层] #{node.name}, 完全透明"
+          return nil  # 返回nil表示跳过此图层
+        end
+
+        # 裁切PNG
+        cropped_png = crop_png(png, bounds)
+        if cropped_png
+          png = cropped_png
+          # 更新坐标和尺寸
+          old_width, old_height = attrs[:width], attrs[:height]
+          attrs[:x] += bounds[:min_x]
+          attrs[:y] += bounds[:min_y]
+          attrs[:width] = bounds[:max_x] - bounds[:min_x] + 1
+          attrs[:height] = bounds[:max_y] - bounds[:min_y] + 1
+          puts "  [强力裁切] #{node.name}(图层): (#{old_width}×#{old_height}) → (#{attrs[:width]}×#{attrs[:height]}), 偏移: (#{bounds[:min_x]}, #{bounds[:min_y]})"
+        end
+      end
+
       saved_path = save_scaled_images(png, filename)
       attrs[:image_path] = saved_path
     rescue => e
@@ -394,6 +512,59 @@ class PsdProcessor
 
   def relative_path(filename)
     File.join("processed", @project.id.to_s, filename)
+  end
+
+  # 增强模式: 分析PNG并返回非透明区域的边界信息
+  # 返回: { min_x, min_y, max_x, max_y, found_opaque }
+  def analyze_png_bounds(png)
+    width = png.width
+    height = png.height
+
+    min_x = width
+    max_x = 0
+    min_y = height
+    max_y = 0
+    found_opaque = false
+
+    (0...height).each do |y|
+      (0...width).each do |x|
+        pixel = png[x, y]
+        alpha = ChunkyPNG::Color.a(pixel)
+        if alpha > 0
+          found_opaque = true
+          min_x = x if x < min_x
+          max_x = x if x > max_x
+          min_y = y if y < min_y
+          max_y = y if y > max_y
+        end
+      end
+    end
+
+    {
+      min_x: min_x,
+      min_y: min_y,
+      max_x: max_x,
+      max_y: max_y,
+      found_opaque: found_opaque
+    }
+  end
+
+  # 根据边界信息裁切PNG
+  def crop_png(png, bounds)
+    return nil unless bounds[:found_opaque]
+
+    cropped_width = bounds[:max_x] - bounds[:min_x] + 1
+    cropped_height = bounds[:max_y] - bounds[:min_y] + 1
+
+    cropped_png = ChunkyPNG::Image.new(cropped_width, cropped_height, ChunkyPNG::Color::TRANSPARENT)
+
+    (0...cropped_height).each do |y|
+      (0...cropped_width).each do |x|
+        cropped_png[x, y] = png[bounds[:min_x] + x, bounds[:min_y] + y]
+      end
+    end
+
+    cropped_png
   end
 
   def save_scaled_images(png, base_filename)

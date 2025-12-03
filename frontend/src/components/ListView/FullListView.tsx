@@ -284,6 +284,7 @@ const FullListView: React.FC = () => {
                     onChange={setExportScales}
                     trimTransparent={trimTransparent}
                     onTrimTransparentChange={setTrimTransparent}
+                    processingMode={project?.processing_mode}
                 />
                 <Button
                     type="primary"

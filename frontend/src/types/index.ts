@@ -11,6 +11,10 @@ export interface Project {
   file_size?: number; // PSD 文件大小 (bytes)
   export_scales?: string[]; // 导出倍率
   trim_transparent?: boolean; // 去除透明背景
+  processing_mode?: 'standard' | 'aggressive'; // 处理模式：标准模式、增强模式
+  layers_count?: number; // 图层数量
+  processing_started_at?: number; // 处理开始时间(Unix时间戳,秒)
+  processing_finished_at?: number; // 处理结束时间(Unix时间戳,秒)
 }
 
 export interface Layer {
