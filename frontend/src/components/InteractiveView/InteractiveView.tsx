@@ -15,12 +15,14 @@ const InteractiveView: React.FC = () => {
         <Layout className="interactive-view-container">
             <Layout>
                 <Content style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <div className="scanner-section">
-                        <ScannerPreview />
-                        <PreviewControls />
-                    </div>
-                    <div className="filter-section">
-                        <FilterList />
+                    <div className="middle-section">
+                        <div className="preview-area">
+                            <ScannerPreview />
+                            <PreviewControls />
+                        </div>
+                        <div className="filter-section">
+                            <FilterList />
+                        </div>
                     </div>
                 </Content>
             </Layout>

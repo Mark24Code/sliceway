@@ -33,8 +33,23 @@ body {
     flex-direction: column;
   }
 
-  .filter-section {
+  .middle-section {
     flex: 1 1 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+  }
+
+  .preview-area {
+    flex: 1 1 50%;
+    overflow: hidden;
+    position: relative;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .filter-section {
+    flex: 1 1 50%;
     overflow: hidden;
     background-color: var(--bg-primary);
     display: flex;
@@ -59,7 +74,6 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    transform: translateX(216px);
     height: 2px;
     background-color: red;
     z-index: 200; // 确保在图片上方

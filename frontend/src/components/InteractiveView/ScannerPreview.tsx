@@ -8,28 +8,38 @@ const ScannerPreview: React.FC = () => {
     const [, setScannerPosition] = useAtom(scannerPositionAtom);
     const zoom = useAtomValue(previewZoomAtom);
     const [scannerWidth, setScannerWidth] = useState(0);
+    const [scannerLeft, setScannerLeft] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
     const [visualScannerY, setVisualScannerY] = useState(0)
 
     const handleScroll = () => {
         if (containerRef.current && imgRef.current) {
-            // 因为容器的高度其实是图片高度决定的，zoom：100% 就是图片高度
-            // 偏移位置就是滚动条位置就是人的注意力位置
-            // 当比例缩小的时候，图片在原位置缩小，等价于 滚动条变大了，所以处以比例，换算到图片偏移比例 
             const scrollTop = containerRef.current.scrollTop;
             const clientHeight = containerRef.current.clientHeight;
-            // 等价图片偏移距离 
-            const realOffsetY = scrollTop / zoom;
+            const scrollHeight = containerRef.current.scrollHeight;
+            const imageHeight = imgRef.current.naturalHeight;
+
+            if (!imageHeight) return;
+
+            // 计算滚动进度（0到1）
+            const maxScroll = scrollHeight - clientHeight;
+            const scrollProgress = maxScroll > 0 ? scrollTop / maxScroll : 0;
+
+            // 扫描线在图片坐标系中的位置
+            const realOffsetY = scrollProgress * imageHeight;
             setScannerPosition(realOffsetY);
 
-            // 视觉的线是根据 fixed 换算成 viewport 的移动距离
-            const imageHeight = imgRef.current?.naturalHeight
-            if (imageHeight) {
-                const ratio = realOffsetY < imageHeight ? realOffsetY / imageHeight : 1
-                setVisualScannerY(ratio * clientHeight)
-            }
+            // 视觉位置：扫描线在可视区域中的位置
+            const renderedImageHeight = imageHeight * zoom;
 
+            if (renderedImageHeight <= clientHeight) {
+                // 图片完全可见时：扫描线在图片内按比例移动
+                setVisualScannerY(scrollProgress * renderedImageHeight);
+            } else {
+                // 图片需要滚动时：保持原有逻辑
+                setVisualScannerY(scrollProgress * clientHeight);
+            }
         }
     };
 
@@ -37,16 +47,35 @@ const ScannerPreview: React.FC = () => {
 
     useEffect(() => {
         if (containerRef.current) {
-            const updateWidth = () => {
+            const updateDimensions = () => {
                 const previewContainer = containerRef.current?.querySelector('.preview-container');
                 if (previewContainer) {
                     setScannerWidth(previewContainer.clientWidth);
                 }
+
+                // 计算容器相对于视口的左边距
+                if (containerRef.current) {
+                    const rect = containerRef.current.getBoundingClientRect();
+                    setScannerLeft(rect.left);
+                }
             };
 
-            updateWidth();
-            window.addEventListener('resize', updateWidth);
-            return () => window.removeEventListener('resize', updateWidth);
+            updateDimensions();
+            window.addEventListener('resize', updateDimensions);
+
+            // 使用 MutationObserver 监听布局变化
+            const observer = new MutationObserver(updateDimensions);
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+
+            return () => {
+                window.removeEventListener('resize', updateDimensions);
+                observer.disconnect();
+            };
         }
     }, []);
 
@@ -76,7 +105,9 @@ const ScannerPreview: React.FC = () => {
                     className="scanner-line"
                     style={{
                         top: `${visualScannerY}px`,
-                        width: scannerWidth > 0 ? `${scannerWidth}px` : '100%'
+                        left: `${scannerLeft}px`,
+                        width: scannerWidth > 0 ? `${scannerWidth}px` : '100%',
+                        transform: 'none'
                     }}
                 />
             </div>
