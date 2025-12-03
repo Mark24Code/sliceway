@@ -88,7 +88,7 @@ docker run -d \
   --name sliceway \
   -p 4567:4567 \
   -v /path/to/data:/data \
-  sliceway:latest
+  mark24code/sliceway:latest
 ```
 
 Windows
