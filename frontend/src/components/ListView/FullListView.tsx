@@ -22,6 +22,7 @@ const FullListView: React.FC = () => {
     const [ratioFilter, setRatioFilter] = useState<string[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
+    const [trimTransparent, setTrimTransparent] = useState<boolean>(false);
 
     // 分页状态
     const [currentPage, setCurrentPage] = useState(1);
@@ -39,7 +40,8 @@ const FullListView: React.FC = () => {
         try {
             const res = await client.post(`/projects/${project.id}/export`, {
                 layer_ids: ids,
-                scales: exportScales
+                scales: exportScales,
+                trim_transparent: trimTransparent
             });
             message.success(`已导出 ${res.data.count} 个文件到 ${res.data.path}`);
         } catch (error) {
@@ -47,7 +49,7 @@ const FullListView: React.FC = () => {
         } finally {
             setGlobalLoading(false);
         }
-    }, [project, exportScales, setGlobalLoading]);
+    }, [project, exportScales, trimTransparent, setGlobalLoading]);
 
     const handleRefresh = useCallback(async () => {
         if (!project) return;
@@ -247,6 +249,8 @@ const FullListView: React.FC = () => {
                 <ExportConfigButton
                     value={exportScales}
                     onChange={setExportScales}
+                    trimTransparent={trimTransparent}
+                    onTrimTransparentChange={setTrimTransparent}
                 />
                 <Button
                     type="primary"

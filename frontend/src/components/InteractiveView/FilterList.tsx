@@ -95,6 +95,7 @@ const FilterList: React.FC = () => {
     }, [visibleLayers, typeFilter, sizeFilter, ratioFilter, activeTab, nameFilter]);
 
     const [exportScales, setExportScales] = useState<string[]>(['1x']);
+    const [trimTransparent, setTrimTransparent] = useState<boolean>(false);
 
     const handleExport = useCallback(async (renames?: Record<number, string>, clearDirectory?: boolean) => {
         if (!project || selectedLayerIds.length === 0) return;
@@ -105,7 +106,8 @@ const FilterList: React.FC = () => {
                 layer_ids: selectedLayerIds,
                 scales: exportScales,
                 renames: renames,
-                clear_directory: clearDirectory
+                clear_directory: clearDirectory,
+                trim_transparent: trimTransparent
             });
             message.success(`已导出 ${res.data.count} 个文件`);
             setRenameModalVisible(false);
@@ -114,7 +116,7 @@ const FilterList: React.FC = () => {
         } finally {
             setGlobalLoading(false);
         }
-    }, [project, selectedLayerIds, exportScales, setGlobalLoading]);
+    }, [project, selectedLayerIds, exportScales, trimTransparent, setGlobalLoading]);
 
     // 防抖导出函数
     const debouncedExport = useCallback(
@@ -228,6 +230,8 @@ const FilterList: React.FC = () => {
                         <ExportConfigButton
                             value={exportScales}
                             onChange={setExportScales}
+                            trimTransparent={trimTransparent}
+                            onTrimTransparentChange={setTrimTransparent}
                         />
                         <Dropdown.Button
                             type="primary"

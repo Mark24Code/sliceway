@@ -472,9 +472,11 @@ post '/api/projects/:id/export' do
   layer_ids = data['layer_ids']
   renames = data['renames'] || {}
   clear_directory = data['clear_directory'] || false
+  trim_transparent = data['trim_transparent'] || false
   puts "DEBUG: Exporting layers #{layer_ids}"
   puts "DEBUG: Renames received: #{renames.inspect}"
   puts "DEBUG: Clear directory: #{clear_directory}"
+  puts "DEBUG: Trim transparent: #{trim_transparent}"
 
   layers = project.layers.where(id: layer_ids)
   export_count = 0
@@ -488,6 +490,9 @@ post '/api/projects/:id/export' do
   FileUtils.mkdir_p(project.export_path)
 
   requested_scales = data['scales'] || ['1x']
+
+  # Track used filenames to avoid conflicts
+  used_filenames = {}
 
   layers.each do |layer|
     next unless layer.image_path
@@ -507,7 +512,7 @@ post '/api/projects/:id/export' do
     if renames[layer.id.to_s] && !renames[layer.id.to_s].empty?
       target_base_name = renames[layer.id.to_s]
     else
-      target_base_name = "#{layer.name}_#{layer.id}"
+      target_base_name = layer.name
     end
 
     requested_scales.each do |scale|
@@ -520,15 +525,101 @@ post '/api/projects/:id/export' do
         target_suffix = "@#{scale}"
       end
 
-      # Determine target filename
-      target = File.join(project.export_path, "#{target_base_name}#{target_suffix}#{ext}")
+      # Determine target filename with conflict resolution
+      # All files go directly into export_path (flat structure)
+      desired_filename = "#{target_base_name}#{target_suffix}#{ext}"
+
+      # Check if filename already used, if so, add numeric suffix
+      if used_filenames[desired_filename]
+        counter = 1
+        loop do
+          new_filename = "#{target_base_name}_#{counter}#{target_suffix}#{ext}"
+          unless used_filenames[new_filename]
+            desired_filename = new_filename
+            break
+          end
+          counter += 1
+        end
+      end
+
+      used_filenames[desired_filename] = true
+      target = File.join(project.export_path, desired_filename)
 
       if File.exist?(source)
-        FileUtils.cp(source, target)
-        export_count += 1
+        if trim_transparent
+          # Load, trim and save
+          begin
+            require 'chunky_png'
+            png = ChunkyPNG::Image.from_file(source)
+            trimmed_png = trim_png_transparency(png)
+            if trimmed_png
+              trimmed_png.save(target, :fast_rgba)
+              export_count += 1
+            else
+              # If trim failed, just copy original
+              FileUtils.cp(source, target)
+              export_count += 1
+            end
+          rescue => e
+            puts "Error trimming #{source}: #{e.message}"
+            # Fallback to copy
+            FileUtils.cp(source, target)
+            export_count += 1
+          end
+        else
+          # Normal copy
+          FileUtils.cp(source, target)
+          export_count += 1
+        end
       end
     end
   end
 
   json success: true, count: export_count, path: project.export_path
+end
+
+# Helper method to trim PNG transparency
+def trim_png_transparency(png)
+  width = png.width
+  height = png.height
+
+  # Find bounds of non-transparent pixels
+  min_x = width
+  max_x = 0
+  min_y = height
+  max_y = 0
+  found_opaque = false
+
+  (0...height).each do |y|
+    (0...width).each do |x|
+      pixel = png[x, y]
+      alpha = ChunkyPNG::Color.a(pixel)
+      if alpha > 0
+        found_opaque = true
+        min_x = x if x < min_x
+        max_x = x if x > max_x
+        min_y = y if y < min_y
+        max_y = y if y > max_y
+      end
+    end
+  end
+
+  return nil unless found_opaque
+  return png if min_x == 0 && min_y == 0 && max_x == width - 1 && max_y == height - 1
+
+  # Crop to non-transparent area
+  cropped_width = max_x - min_x + 1
+  cropped_height = max_y - min_y + 1
+  cropped_png = ChunkyPNG::Image.new(cropped_width, cropped_height, ChunkyPNG::Color::TRANSPARENT)
+
+  (0...cropped_height).each do |y|
+    (0...cropped_width).each do |x|
+      cropped_png[x, y] = png[min_x + x, min_y + y]
+    end
+  end
+
+  cropped_png
+rescue => e
+  puts "Error in trim_png_transparency: #{e.message}"
+  png
 end
