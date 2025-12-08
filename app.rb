@@ -99,7 +99,7 @@ get '/api/projects' do
   page = (params[:page] || 1).to_i
   per_page = 20
   projects = Project.order(created_at: :desc).offset((page - 1) * per_page).limit(per_page)
-  json projects: projects, total: Project.count
+  json projects: projects.as_json, total: Project.count
 end
 
 post '/api/projects' do
@@ -148,7 +148,7 @@ post '/api/projects' do
     # 保存任务PID到全局变量
     $running_tasks[project.id] = pid
 
-    json project
+    json project.as_json
   else
     status 400
     json error: "No file uploaded"
@@ -157,7 +157,7 @@ end
 
 get '/api/projects/:id' do
   project = Project.find(params[:id])
-  json project
+  json project.as_json
 end
 
 post '/api/projects/:id/process' do
@@ -463,7 +463,7 @@ get '/api/projects/:id/layers' do
     layers = layers.where("name LIKE ?", "%#{params[:q]}%")
   end
 
-  json layers
+  json layers.as_json
 end
 
 # Export
