@@ -202,6 +202,20 @@ class PsdProcessor
       width = slice.width
       height = slice.height
 
+      # 步骤1: 画布裁切
+      clipped = clip_png_to_canvas(png, x, y)
+      unless clipped
+        puts "- [跳过切片] #{slice.name}, 完全超出画布"
+        return
+      end
+
+      png = clipped[:png]
+      x = clipped[:x]
+      y = clipped[:y]
+      width = clipped[:width]
+      height = clipped[:height]
+
+      # 步骤2: 增强模式处理
       if @project.processing_mode == 'aggressive'
         bounds = analyze_png_bounds(png)
 
@@ -326,7 +340,20 @@ class PsdProcessor
     begin
       png = node.to_png
 
-      # 增强模式处理 - 先分析边界
+      # 步骤1: 画布裁切
+      clipped = clip_png_to_canvas(png, attrs[:x], attrs[:y])
+      unless clipped
+        puts "- [跳过组] #{node.name}, 完全超出画布"
+        return nil
+      end
+
+      png = clipped[:png]
+      attrs[:x] = clipped[:x]
+      attrs[:y] = clipped[:y]
+      attrs[:width] = clipped[:width]
+      attrs[:height] = clipped[:height]
+
+      # 步骤2: 增强模式处理 - 先分析边界
       if @project.processing_mode == 'aggressive' && png
         bounds = analyze_png_bounds(png)
 
@@ -364,7 +391,20 @@ class PsdProcessor
     begin
       png_without = render_group_without_text(node)
 
-      # 增强模式处理 - 使用相同的边界信息
+      # 步骤1: 画布裁切（使用原始attrs中的坐标，因为已经被上面更新）
+      # 注意：这里需要使用node的原始坐标，不是更新后的attrs
+      original_x = node.left
+      original_y = node.top
+
+      clipped_without = clip_png_to_canvas(png_without, original_x, original_y)
+      unless clipped_without
+        # 无文本版本也完全超出画布
+        return  # 含文本版本已处理，这里只需返回
+      end
+
+      png_without = clipped_without[:png]
+
+      # 步骤2: 增强模式处理 - 使用相同的边界信息
       if @project.processing_mode == 'aggressive' && png_without && bounds && bounds[:found_opaque]
         cropped_png = crop_png(png_without, bounds)
         if cropped_png
@@ -393,13 +433,26 @@ class PsdProcessor
     begin
       png = node.to_png
 
-      # 增强模式处理
+      # 步骤1: 画布裁切
+      clipped = clip_png_to_canvas(png, attrs[:x], attrs[:y])
+      unless clipped
+        puts "- [跳过文本] #{node.name}, 完全超出画布"
+        return nil
+      end
+
+      png = clipped[:png]
+      attrs[:x] = clipped[:x]
+      attrs[:y] = clipped[:y]
+      attrs[:width] = clipped[:width]
+      attrs[:height] = clipped[:height]
+
+      # 步骤2: 增强模式处理
       if @project.processing_mode == 'aggressive' && png
         bounds = analyze_png_bounds(png)
 
         unless bounds[:found_opaque]
           puts "- [跳过文本] #{node.name}, 完全透明"
-          return nil  # 返回nil表示跳过此图层
+          return nil
         end
 
         # 裁切PNG
@@ -432,13 +485,26 @@ class PsdProcessor
     begin
       png = node.to_png
 
-      # 增强模式处理
+      # 步骤1: 画布裁切
+      clipped = clip_png_to_canvas(png, attrs[:x], attrs[:y])
+      unless clipped
+        puts "- [跳过图层] #{node.name}, 完全超出画布"
+        return nil
+      end
+
+      png = clipped[:png]
+      attrs[:x] = clipped[:x]
+      attrs[:y] = clipped[:y]
+      attrs[:width] = clipped[:width]
+      attrs[:height] = clipped[:height]
+
+      # 步骤2: 增强模式处理
       if @project.processing_mode == 'aggressive' && png
         bounds = analyze_png_bounds(png)
 
         unless bounds[:found_opaque]
           puts "- [跳过图层] #{node.name}, 完全透明"
-          return nil  # 返回nil表示跳过此图层
+          return nil
         end
 
         # 裁切PNG
@@ -514,6 +580,40 @@ class PsdProcessor
     File.join("processed", @project.id.to_s, filename)
   end
 
+  # 计算图层与画布的交集
+  def calculate_canvas_intersection(x, y, width, height)
+    canvas_width = @project.width
+    canvas_height = @project.height
+
+    # 计算交集矩形
+    intersection_left = [0, x].max
+    intersection_top = [0, y].max
+    intersection_right = [canvas_width, x + width].min
+    intersection_bottom = [canvas_height, y + height].min
+
+    # 检查是否有交集
+    has_intersection = intersection_right > intersection_left &&
+                      intersection_bottom > intersection_top
+
+    return { has_intersection: false } unless has_intersection
+
+    # 计算裁切区域（相对于原图层）
+    crop_x = intersection_left - x  # 在原PNG中的起始x
+    crop_y = intersection_top - y   # 在原PNG中的起始y
+    crop_width = intersection_right - intersection_left
+    crop_height = intersection_bottom - intersection_top
+
+    {
+      has_intersection: true,
+      crop_x: crop_x,
+      crop_y: crop_y,
+      crop_width: crop_width,
+      crop_height: crop_height,
+      new_x: intersection_left,
+      new_y: intersection_top
+    }
+  end
+
   # 增强模式: 分析PNG并返回非透明区域的边界信息
   # 返回: { min_x, min_y, max_x, max_y, found_opaque }
   def analyze_png_bounds(png)
@@ -565,6 +665,50 @@ class PsdProcessor
     end
 
     cropped_png
+  end
+
+  # 将PNG裁切到画布范围
+  def clip_png_to_canvas(png, layer_x, layer_y)
+    intersection = calculate_canvas_intersection(
+      layer_x, layer_y, png.width, png.height
+    )
+
+    return nil unless intersection[:has_intersection]
+
+    # 如果完全在画布内，无需裁切
+    if intersection[:crop_x] == 0 &&
+       intersection[:crop_y] == 0 &&
+       intersection[:crop_width] == png.width &&
+       intersection[:crop_height] == png.height
+      return {
+        png: png,
+        x: layer_x,
+        y: layer_y,
+        width: png.width,
+        height: png.height
+      }
+    end
+
+    # 裁切PNG
+    clipped_png = ChunkyPNG::Image.new(
+      intersection[:crop_width],
+      intersection[:crop_height],
+      ChunkyPNG::Color::TRANSPARENT
+    )
+
+    (0...intersection[:crop_height]).each do |y|
+      (0...intersection[:crop_width]).each do |x|
+        clipped_png[x, y] = png[intersection[:crop_x] + x, intersection[:crop_y] + y]
+      end
+    end
+
+    {
+      png: clipped_png,
+      x: intersection[:new_x],
+      y: intersection[:new_y],
+      width: intersection[:crop_width],
+      height: intersection[:crop_height]
+    }
   end
 
   def save_scaled_images(png, base_filename)
