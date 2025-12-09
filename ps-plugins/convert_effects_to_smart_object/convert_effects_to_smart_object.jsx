@@ -25,7 +25,7 @@ function showDialog() {
     // --- Header ---
     var pnlHeader = win.add("panel", undefined, undefined);
     pnlHeader.alignment = "fill";
-    var lblTitle = pnlHeader.add("statictext", undefined, "渲染元素烘焙工具");
+    var lblTitle = pnlHeader.add("statictext", undefined, "图片预处理工具");
     lblTitle.alignment = "center";
     lblTitle.graphics.font = ScriptUI.newFont(lblTitle.graphics.font.name, "BOLD", 16);
 
@@ -43,7 +43,7 @@ function showDialog() {
     list.add("statictext", undefined, "• 任何带有链接蒙版 (Linked Mask) 的图层");
     list.add("statictext", undefined, "• 任何带有链接矢量蒙版的图层");
 
-    grpDesc.add("statictext", undefined, "目标：确保导出时保留完整渲染效果。", { multiline: true });
+    grpDesc.add("statictext", undefined, "确保导出时保留完整渲染效果。", { multiline: true });
 
     // --- Options ---
     var pnlOpts = win.add("panel", undefined, "选项");
