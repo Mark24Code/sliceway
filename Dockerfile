@@ -22,7 +22,10 @@ RUN apk add --no-cache \
     procps \
     rust \
     cargo \
-    musl-dev
+    musl-dev \
+    libwebp \
+    libwebp-dev \
+    libwebp-tools
 
 WORKDIR /app
 

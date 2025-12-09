@@ -90,9 +90,9 @@ class PsdProcessor
 
   def export_full_preview(psd)
     webp_path = File.join(@output_dir, "full_preview.webp")
-    png_path = File.join(@output_dir, "full_preview.png")
+    # png_path removed as we want to strictly enforce WebP
 
-    puts "✓ [Preview] Generating optimized preview..."
+    puts "✓ [Preview] Generating optimized preview (WebP only)..."
 
     image = nil
     begin
@@ -107,27 +107,12 @@ class PsdProcessor
       image.write(webp_path) { |info| info.quality = 75 }
       puts "✓ [Preview] Generated WebP preview: #{File.basename(webp_path)}"
       
-      # If successful, ensure no stale PNG exists (optional, but good for cleanup)
-      FileUtils.rm_f(png_path) if File.exist?(png_path)
-      
     rescue => e
-      puts "⚠ [Preview] WebP generation failed: #{e.message}"
-      puts "  Falling back to PNG generation..."
-      
-      begin
-        if image
-          image.format = 'PNG'
-          image.write(png_path)
-        else
-          # Fallback to psd gem native export if RMagick failed to read/write
-          if psd.image
-            psd.image.save_as_png(png_path)
-          end
-        end
-        puts "✓ [Preview] Generated PNG preview (Backup)"
-      rescue => e2
-        puts "✗ [Preview] All preview generation failed: #{e2.message}"
-      end
+      puts "✗ [Preview] WebP generation failed: #{e.message}"
+      puts "  Stack trace: #{e.backtrace.first(3).join("\n  ")}"
+      # No fallback - strictly fail if WebP cannot be generated
+      # raising error to ensure we know about the failure
+      raise e 
     ensure
       image.destroy! if image
     end

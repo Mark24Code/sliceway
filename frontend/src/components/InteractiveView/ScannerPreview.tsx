@@ -21,39 +21,27 @@ const ScannerPreview: React.FC = () => {
         stateRef.current = { scannerPosition, zoom, image };
     }, [scannerPosition, zoom, image]);
 
-    // Load Image with Fallback (WebP -> PNG)
+    // Load WebP Image (Strictly WebP)
     useEffect(() => {
         if (!project) return;
 
         // Reset image while loading new project
         setImage(null);
 
-        const tryLoadImage = (src: string): Promise<HTMLImageElement> => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.src = src;
-                img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error(`Failed to load ${src}`));
-            });
-        };
-
         const loadPreview = async () => {
             const webpUrl = `${IMAGE_BASE_URL}/processed/${project.id}/full_preview.webp`;
-            const pngUrl = `${IMAGE_BASE_URL}/processed/${project.id}/full_preview.png`;
+            // Removed pngUrl and fallback logic as we now strictly enforce WebP
 
             try {
-                // Try WebP first (Optimized)
-                const img = await tryLoadImage(webpUrl);
+                const img = new Image();
+                img.src = webpUrl;
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => reject(new Error(`Failed to load ${webpUrl}`));
+                });
                 setImage(img);
             } catch (e) {
-                // Fallback to PNG (Legacy/Backup)
-                console.warn("WebP preview not found or failed to load, trying PNG fallback...", e);
-                try {
-                    const img = await tryLoadImage(pngUrl);
-                    setImage(img);
-                } catch (e2) {
-                    console.error("Failed to load project preview image (both WebP and PNG failed)", e2);
-                }
+                console.error("Failed to load project preview image (WebP only)", e);
             }
         };
 
