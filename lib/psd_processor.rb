@@ -162,7 +162,9 @@ class PsdProcessor
     # 切片通常没有 visible? 方法，默认为可见
     hidden = slice.respond_to?(:visible?) ? !slice.visible? : false
 
-    filename = "slice_#{slice.id}_#{SecureRandom.hex(4)}.png"
+    # 生成唯一文件名，避免重名覆盖
+    # 使用纯 hash 或 id + hash 确保唯一性
+    filename = "slice_#{slice.id}_#{SecureRandom.hex(6)}.png"
     png = nil
     image = nil
 
@@ -244,7 +246,7 @@ class PsdProcessor
       Layer.create!(
         project_id: @project.id,
         resource_id: slice.id.to_s,
-        name: slice.name,
+        name: (slice.name.nil? || slice.name.strip.empty?) ? "Slice #{slice.id}" : slice.name,
         layer_type: 'slice',
         x: x,
         y: y,
