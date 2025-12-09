@@ -27,7 +27,7 @@ const VersionInfo: React.FC = () => {
     fetchVersion();
   }, []);
 
-  const frontendVersion = '1.8.0';
+  const frontendVersion = '1.8.1';
 
   return (
     <Space size="small" style={{ marginLeft: 'auto' }}>
