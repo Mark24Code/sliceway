@@ -109,10 +109,30 @@ docker run -d ^
 
 ## 📖 Usage Guide
 
+### 0. PSD File Pre-processing (Recommended)
+
+For better parsing results, it's recommended to pre-process your PSD files using Photoshop scripts before uploading:
+
+1. **Run the Layer Processing Script**
+   - Use script: `ps-plugins/convert_effects_to_smart_object/convert_effects_to_smart_object.jsx`
+   - This script converts layer effects to smart objects for better compatibility
+
+2. **How to Run Photoshop Scripts**
+   - Open your PSD file in Photoshop
+   - Go to menu: `File` → `Scripts` → `Browse...`
+   - Select and import the `.jsx` script file mentioned above
+   - Wait for the script to complete execution
+
+3. **Save the Processed File**
+   - Save the processed PSD file as a copy
+   - Upload this copy to the platform
+
+> **Note**: While pre-processing is optional, it's highly recommended for PSD files with complex effects to ensure optimal parsing and export results.
+
 ### 1. Create Project
 1. Open the frontend interface
 2. Click "New Project" button
-3. Upload PSD/PSB file
+3. Upload PSD/PSB file (preferably pre-processed)
 4. Set project name and export path
 
 ### 2. Process Files
