@@ -117,7 +117,9 @@ post '/api/projects' do
     FileUtils.mkdir_p(upload_dir)
     target_path = File.join(upload_dir, "#{Time.now.to_i}_#{filename}")
     File.open(target_path, 'wb') do |f|
-      f.write(params[:file][:tempfile].read)
+      # Use streaming copy to handle large files (PSB) and avoid memory exhaustion/EINVAL errors
+      # params[:file][:tempfile] is already an open file handle from Rack
+      IO.copy_stream(params[:file][:tempfile], f)
     end
 
     # 处理导出路径：如果是相对路径，转换为绝对路径

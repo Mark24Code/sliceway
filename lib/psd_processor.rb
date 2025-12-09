@@ -89,32 +89,47 @@ class PsdProcessor
   end
 
   def export_full_preview(psd)
-    path = File.join(@output_dir, "full_preview.png")
+    webp_path = File.join(@output_dir, "full_preview.webp")
+    png_path = File.join(@output_dir, "full_preview.png")
 
-    # Check if the source file is a PSB
-    if File.extname(@project.psd_path).downcase == '.psb'
-      image = nil
+    puts "✓ [Preview] Generating optimized preview..."
+
+    image = nil
+    begin
+      # Try to use RMagick for both PSD and PSB to generate WebP
+      # Read the composite layer [0]
+      image = Magick::Image.read(@project.psd_path + "[0]").first
+      
+      # Set format to WebP and quality
+      image.format = 'WEBP'
+      
+      # Use high quality but compressed
+      image.write(webp_path) { |info| info.quality = 75 }
+      puts "✓ [Preview] Generated WebP preview: #{File.basename(webp_path)}"
+      
+      # If successful, ensure no stale PNG exists (optional, but good for cleanup)
+      FileUtils.rm_f(png_path) if File.exist?(png_path)
+      
+    rescue => e
+      puts "⚠ [Preview] WebP generation failed: #{e.message}"
+      puts "  Falling back to PNG generation..."
+      
       begin
-        # Use RMagick to convert PSB to PNG
-        image = Magick::Image.read(@project.psd_path + "[0]").first
-        image.write(path)
-      rescue => e
-        puts "⚠ [预览生成] RMagick 生成预览失败: #{e.message}"
-        psd_image = psd.image
-        psd_image.save_as_png(path)
-        psd_image = nil
-      ensure
-        # 显式销毁 RMagick 图像对象以释放内存
         if image
-          image.destroy!
-          image = nil
+          image.format = 'PNG'
+          image.write(png_path)
+        else
+          # Fallback to psd gem native export if RMagick failed to read/write
+          if psd.image
+            psd.image.save_as_png(png_path)
+          end
         end
+        puts "✓ [Preview] Generated PNG preview (Backup)"
+      rescue => e2
+        puts "✗ [Preview] All preview generation failed: #{e2.message}"
       end
-    else
-      # Use existing logic for PSD
-      psd_image = psd.image
-      psd_image.save_as_png(path)
-      psd_image = nil
+    ensure
+      image.destroy! if image
     end
   end
 
