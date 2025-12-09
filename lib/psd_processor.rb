@@ -2,6 +2,7 @@ require 'psd'
 require 'rmagick'
 require 'fileutils'
 require 'securerandom'
+require 'digest'
 require_relative 'models'
 
 # 性能监控类
@@ -162,9 +163,8 @@ class PsdProcessor
     # 切片通常没有 visible? 方法，默认为可见
     hidden = slice.respond_to?(:visible?) ? !slice.visible? : false
 
-    # 生成唯一文件名，避免重名覆盖
-    # 使用纯 hash 或 id + hash 确保唯一性
-    filename = "slice_#{slice.id}_#{SecureRandom.hex(6)}.png"
+    # Temporary filename for intermediate processing if needed
+    temp_filename = "temp_slice_#{slice.id}_#{SecureRandom.hex(6)}.png"
     png = nil
     image = nil
 
@@ -179,7 +179,7 @@ class PsdProcessor
           cropped = image.crop(slice.left, slice.top, slice.width, slice.height)
 
           # 保存到临时文件
-          temp_path = File.join(@output_dir, filename)
+          temp_path = File.join(@output_dir, temp_filename)
           cropped.write(temp_path)
 
           # 使用 ChunkyPNG 读取以保持兼容性
@@ -240,6 +240,12 @@ class PsdProcessor
           puts "  [强力裁切] #{slice.name}: (#{old_width}×#{old_height}) → (#{width}×#{height}), 偏移: (#{bounds[:min_x]}, #{bounds[:min_y]})"
         end
       end
+
+      # Generate filename based on content hash
+      # Use fast_rgba export for hashing which is consistent
+      blob = png.to_blob(:fast_rgba)
+      hash = Digest::MD5.hexdigest(blob)
+      filename = "slice_#{hash}.png"
 
       saved_path = save_scaled_images(png, filename)
 
