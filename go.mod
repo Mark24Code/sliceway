@@ -3,7 +3,7 @@ module psd2img
 go 1.25.4
 
 require (
-	github.com/Mark24Code/psd v0.0.0-20251212095109-31ded0a098f3
+	github.com/Mark24Code/psd v0.0.0-20251212103644-cc5c0c1fc349
 	github.com/chai2010/webp v1.4.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/gin-contrib/cors v1.7.6
@@ -49,3 +49,5 @@ require (
 	golang.org/x/tools v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
+
+replace github.com/Mark24Code/psd => ./source/psd

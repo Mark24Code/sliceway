@@ -30,3 +30,6 @@ exports/
 public/processed/
 logs/
 *.log
+*.psd
+*.psb
+*.png
