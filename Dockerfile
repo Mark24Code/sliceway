@@ -1,65 +1,87 @@
+# Multi-stage build for Go application
+
 # Stage 1: Build Frontend
-FROM node:22-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install
+COPY frontend/package*.json ./
+RUN npm ci --only=production
 COPY frontend/ .
-# Build for production
 RUN npm run build
 
-# Stage 2: Setup Backend & Serve
-FROM ruby:3.3-alpine
+# Stage 2: Build Go Backend
+FROM golang:1.25-alpine AS backend-builder
 
-# Install dependencies
-RUN apk add --no-cache \
-    imagemagick \
-    imagemagick-dev \
-    sqlite-dev \
-    build-base \
-    tzdata \
-    git \
-    pkgconfig \
-    procps \
-    rust \
-    cargo \
-    musl-dev \
-    libwebp \
-    libwebp-dev \
-    libwebp-tools
+# Install build dependencies (CGO required for SQLite)
+RUN apk add --no-cache git gcc musl-dev
 
 WORKDIR /app
 
-# Copy Gemfile and Gemfile.lock
-COPY Gemfile Gemfile.lock ./
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
 
-# Install gems
-RUN bundle config set --local without 'development test' && \
-    bundle install
+# Copy local psd library
+COPY psd/ ./psd/
 
-# Copy application code
-COPY . .
+# Download dependencies
+ENV GOPROXY=https://goproxy.cn,direct
+RUN go mod download
 
-# Copy built frontend assets from builder stage
-# Store in /app/dist separate from user data
+# Copy source code
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
+
+# Build the application with optimizations
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags="-s -w" \
+    -o server ./cmd/server
+
+# Stage 3: Runtime
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    sqlite \
+    tzdata
+
+WORKDIR /app
+
+# Copy built binary
+COPY --from=backend-builder /app/server .
+
+# Copy frontend dist
 COPY --from=frontend-builder /app/frontend/dist ./dist
 
-# Create necessary directories for volume mounts
+# Copy VERSION file
+COPY VERSION ./VERSION
+
+# Create necessary directories
 RUN mkdir -p /data/uploads \
     /data/public/processed \
     /data/db \
     /data/exports
 
-# Expose port
-EXPOSE 4567
-
 # Environment variables
-ENV RACK_ENV=production
+ENV PORT=4567
 ENV UPLOADS_PATH=/data/uploads
 ENV PUBLIC_PATH=/data/public
 ENV DB_PATH=/data/db/production.sqlite3
 ENV EXPORTS_PATH=/data/exports
 ENV STATIC_PATH=/app/dist
-ENV RUBY_YJIT_ENABLE=1
+ENV APP_ENV=production
+ENV GIN_MODE=release
 
-# Start command
-CMD ["sh", "-c", "bundle exec rake db:migrate && bundle exec puma -t 5:5 -p 4567 -e production"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4567/api/version || exit 1
+
+# Expose port
+EXPOSE 4567
+
+# Run as non-root user
+RUN adduser -D -u 1000 appuser && \
+    chown -R appuser:appuser /app /data
+USER appuser
+
+# Run the server
+CMD ["/app/server"]

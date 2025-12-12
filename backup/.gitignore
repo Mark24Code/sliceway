@@ -1,0 +1,11 @@
+psd.rb
+output
+dist
+images
+.claude
+.DS_Store
+*.png
+db/*
+*.psd
+*.psb
+*.webp
