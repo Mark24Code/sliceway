@@ -399,32 +399,29 @@ func layerTypeMap(t string) string {
 }
 
 func sanitizeFilename(name string) string {
-	// Keep UTF-8 characters but remove filesystem-unsafe characters
-	// Only remove: / \ : * ? " < > |
-	replacer := strings.NewReplacer(
-		"/", "_",
-		"\\", "_",
-		":", "_",
-		"*", "_",
-		"?", "_",
-		"\"", "_",
-		"<", "_",
-		">", "_",
-		"|", "_",
-	)
+	// Remove all non-ASCII characters to prevent "illegal byte sequence" errors on macOS
+	// This is more reliable than trying to preserve UTF-8 characters
+	var result []rune
 
-	sanitized := replacer.Replace(name)
-
-	// Replace spaces with underscores for better compatibility
-	sanitized = strings.ReplaceAll(sanitized, " ", "_")
-
-	// Trim to reasonable length (counting runes, not bytes)
-	runes := []rune(sanitized)
-	if len(runes) > 50 {
-		sanitized = string(runes[:50])
+	for _, r := range name {
+		// Keep only ASCII alphanumeric, hyphen, and underscore
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			result = append(result, r)
+		} else if r == ' ' {
+			// Convert spaces to underscores
+			result = append(result, '_')
+		}
+		// Skip all other characters (including non-ASCII)
 	}
 
-	// If empty after sanitization, use hash
+	sanitized := string(result)
+
+	// Trim to reasonable length
+	if len(sanitized) > 50 {
+		sanitized = sanitized[:50]
+	}
+
+	// If empty after sanitization, use hash of original name
 	if len(strings.TrimSpace(sanitized)) == 0 {
 		hash := md5.Sum([]byte(name))
 		sanitized = hex.EncodeToString(hash[:])[:12]
@@ -578,15 +575,12 @@ func (p *PSDProcessor) handleText(ctx context.Context, node *psd.Node, attrs *La
 	filename := fmt.Sprintf("text_%s_%s.png", safeName, generateRandomHex(4))
 	var img image.Image
 	var err error
+
+	// Use ToPNG() for proper rendering instead of raw Layer.ToImage()
 	img, err = node.ToPNG()
 	if err != nil || img == nil {
-		if node.Layer != nil {
-			img, err = node.Layer.ToImage()
-		}
-		if err != nil || img == nil {
-			log.Printf("✗ [导出文本] %s 失败: %v\n", node.Name, err)
-			return nil
-		}
+		log.Printf("✗ [导出文本] %s 失败: %v\n", node.Name, err)
+		return nil
 	}
 
 	// Step 1: Clip to canvas
@@ -643,12 +637,25 @@ func (p *PSDProcessor) handleLayer(ctx context.Context, node *psd.Node, attrs *L
 	var img image.Image
 	var err error
 
-	// Try to get image from node
+	// Debug: Check if layer has channel data
 	if node.Layer != nil {
+		log.Printf("  [DEBUG] Layer %s has Layer object\n", node.Name)
+		// Try using Layer.ToImage() which directly accesses channel data
 		img, err = node.Layer.ToImage()
-	} else {
-		img, err = node.ToPNG()
+		if err != nil {
+			log.Printf("  [DEBUG] Layer.ToImage() error: %v\n", err)
+		}
+		if img != nil {
+			bounds := img.Bounds()
+			log.Printf("  [DEBUG] Layer.ToImage() returned image with bounds: %v\n", bounds)
+		} else {
+			log.Printf("  [DEBUG] Layer.ToImage() returned nil\n")
+		}
 	}
+
+	// Always use ToPNG() which includes proper rendering
+	// node.Layer.ToImage() only gets raw channel data without proper compositing
+	img, err = node.ToPNG()
 
 	if err != nil || img == nil {
 		log.Printf("✗ [导出图层] %s 失败: %v\n", node.Name, err)

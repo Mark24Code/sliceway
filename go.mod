@@ -3,7 +3,7 @@ module psd2img
 go 1.25.4
 
 require (
-	github.com/Mark24Code/psd v0.0.0-20251212055710-f99ddbd27293
+	github.com/Mark24Code/psd v0.0.0-20251212073634-ad2d0642a5bd
 	github.com/chai2010/webp v1.4.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/gin-contrib/cors v1.7.6
