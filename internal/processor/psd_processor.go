@@ -3,7 +3,9 @@ package processor
 import (
 	"context"
 	"crypto/md5"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"log"
@@ -17,12 +19,28 @@ import (
 	"github.com/Mark24Code/psd"
 )
 
+// LayerAttributes holds attributes for creating a layer record
+type LayerAttributes struct {
+	ProjectID  uint
+	Name       string
+	LayerType  string
+	X          int
+	Y          int
+	Width      int
+	Height     int
+	Content    string
+	ImagePath  string
+	ParentID   *uint
+	Hidden     bool
+	Metadata   models.Metadata
+}
+
 // PSDProcessor handles PSD file processing
 type PSDProcessor struct {
-	project    *models.Project
-	outputDir  string
-	publicPath string
-	utils      *ImageUtils
+	project        *models.Project
+	outputDir      string
+	publicPath     string
+	utils          *ImageUtils
 	processedCount int
 }
 
@@ -246,82 +264,44 @@ func (p *PSDProcessor) processNode(ctx context.Context, node *psd.Node, parentID
 	layerType := p.determineNodeType(node)
 
 	// Prepare layer attributes
-	x, y := int(node.Left), int(node.Top)
-	width, height := int(node.Width()), int(node.Height())
-
-	// Get node image
-	var img image.Image
-	var err error
-
-	// For groups, render the group
-	if node.Type == "group" {
-		img, err = node.ToPNG()
-	} else if node.Layer != nil {
-		img, err = node.Layer.ToImage()
+	attrs := &LayerAttributes{
+		ProjectID: p.project.ID,
+		Name:      node.Name,
+		LayerType: layerType,
+		X:         int(node.Left),
+		Y:         int(node.Top),
+		Width:     int(node.Width()),
+		Height:    int(node.Height()),
+		ParentID:  parentID,
+		Hidden:    !node.Visible,
+		Metadata: models.Metadata{
+			"scales":     p.project.ExportScales,
+			"opacity":    node.Opacity,
+			"blend_mode": node.BlendMode,
+		},
 	}
 
-	if err != nil || img == nil {
-		// For groups without image, still create record
-		if node.Type == "group" {
-			layerRecord := p.createLayerRecord(node, parentID, layerType, x, y, width, height, "")
-			if layerRecord != nil {
-				// Process children
-				for _, child := range node.Children {
-					p.processNode(ctx, child, &layerRecord.ID)
-				}
-			}
-		}
+	// Handle different node types
+	var layerRecord *models.Layer
+	if layerType == "group" {
+		layerRecord = p.handleGroup(ctx, node, attrs)
+	} else if layerType == "text" {
+		layerRecord = p.handleText(ctx, node, attrs)
+	} else {
+		layerRecord = p.handleLayer(ctx, node, attrs)
+	}
+
+	// If handle returned nil, skip this layer (e.g., fully transparent in aggressive mode)
+	if layerRecord == nil && p.project.ProcessingMode == "aggressive" {
 		return
 	}
 
-	// Apply aggressive mode processing if enabled
-	if p.project.ProcessingMode == "aggressive" {
-		// Clip to canvas
-		clippedImg, newX, newY, clipErr := p.utils.ClipToCanvas(img, x, y, p.project.Width, p.project.Height)
-		if clipErr != nil {
-			log.Printf("- [跳过%s] %s, 完全超出画布\n", layerType, node.Name)
-			return
-		}
-		img = clippedImg
-		x, y = newX, newY
-
-		// Analyze and trim transparency
-		minX, minY, maxX, maxY, foundOpaque := p.utils.AnalyzeTransparency(img)
-		if !foundOpaque {
-			log.Printf("- [跳过%s] %s, 完全透明\n", layerType, node.Name)
-			return
-		}
-
-		// Crop to non-transparent bounds
-		if minX > 0 || minY > 0 || maxX < img.Bounds().Dx()-1 || maxY < img.Bounds().Dy()-1 {
-			oldWidth, oldHeight := width, height
-			cropRect := image.Rect(minX, minY, maxX+1, maxY+1)
-			img = img.(*image.RGBA).SubImage(cropRect).(*image.RGBA)
-			x += minX
-			y += minY
-			width = maxX - minX + 1
-			height = maxY - minY + 1
-			log.Printf("  [强力裁切] %s: (%dx%d) → (%dx%d)\n", node.Name, oldWidth, oldHeight, width, height)
-		}
-	}
-
-	// Save scaled images
-	filename := fmt.Sprintf("%s_%d_%s.png", layerType, p.project.ID, sanitizeFilename(node.Name))
-	relativePath, err := p.utils.SaveScaledImages(img, p.outputDir, filename, p.project.ExportScales)
-	if err != nil {
-		log.Printf("✗ [导出%s] %s 失败: %v\n", layerType, node.Name, err)
-		return
-	}
-
-	imagePath := filepath.Join("processed", fmt.Sprintf("%d", p.project.ID), relativePath)
-
-	// Create layer record
-	layerRecord := p.createLayerRecord(node, parentID, layerType, x, y, width, height, imagePath)
+	// If we couldn't create the record, return
 	if layerRecord == nil {
 		return
 	}
 
-	log.Printf("✓ [导出%s] %s (%dx%d)\n", layerTypeMap(layerType), node.Name, width, height)
+	log.Printf("✓ [导出%s] %s (%dx%d)\n", layerTypeMap(layerType), node.Name, attrs.Width, attrs.Height)
 	p.processedCount++
 
 	// Process children if it's a group
@@ -411,3 +391,276 @@ func sanitizeFilename(name string) string {
 	}
 	return sanitized
 }
+
+// generateRandomHex generates a random hex string of specified length
+func generateRandomHex(n int) string {
+	bytes := make([]byte, n)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
+// handleGroup processes a group node
+func (p *PSDProcessor) handleGroup(ctx context.Context, node *psd.Node, attrs *LayerAttributes) *models.Layer {
+	// Export with text (含文本版本)
+	filenameWith := fmt.Sprintf("group_%s_with_text_%s.png", node.Name, generateRandomHex(4))
+	var imgWith image.Image
+	var err error
+	var bounds *TransparencyBounds // Declare bounds first
+
+	imgWith, err = node.ToPNG()
+	if err != nil || imgWith == nil {
+		log.Printf("✗ [导出组(含文本)] %s 失败: %v\n", node.Name, err)
+		// Create record without image for groups that fail to render
+		return p.createLayerRecordFromAttrs(attrs)
+	}
+
+	// Step 1: Clip to canvas
+	clipped, newX, newY, clipErr := p.utils.ClipToCanvas(imgWith, attrs.X, attrs.Y, p.project.Width, p.project.Height)
+	if clipErr != nil {
+		log.Printf("- [跳过组] %s, 完全超出画布\n", node.Name)
+		return nil
+	}
+
+	imgWith = clipped
+	attrs.X = newX
+	attrs.Y = newY
+	attrs.Width = clipped.Bounds().Dx()
+	attrs.Height = clipped.Bounds().Dy()
+
+	// Step 2: Aggressive mode processing
+	if p.project.ProcessingMode == "aggressive" {
+		minX, minY, maxX, maxY, foundOpaque := p.utils.AnalyzeTransparency(imgWith)
+		if !foundOpaque {
+			log.Printf("- [跳过组] %s, 完全透明\n", node.Name)
+			return nil
+		}
+
+		// Store bounds for use with no-text version
+		bounds = &TransparencyBounds{
+			MinX:        minX,
+			MinY:        minY,
+			MaxX:        maxX,
+			MaxY:        maxY,
+			FoundOpaque: foundOpaque,
+		}
+
+		// Crop to non-transparent bounds
+		if minX > 0 || minY > 0 || maxX < imgWith.Bounds().Dx()-1 || maxY < imgWith.Bounds().Dy()-1 {
+			oldWidth, oldHeight := attrs.Width, attrs.Height
+			cropRect := image.Rect(minX, minY, maxX+1, maxY+1)
+			imgWith = cropImage(imgWith, cropRect)
+			attrs.X += minX
+			attrs.Y += minY
+			attrs.Width = maxX - minX + 1
+			attrs.Height = maxY - minY + 1
+			log.Printf("  [强力裁切] %s(组-含文本): (%dx%d) → (%dx%d), 偏移: (%d, %d)\n",
+				node.Name, oldWidth, oldHeight, attrs.Width, attrs.Height, minX, minY)
+		}
+	}
+
+	// Save with text version
+	savedPath, err := p.utils.SaveScaledImages(imgWith, p.outputDir, filenameWith, p.project.ExportScales)
+	if err != nil {
+		log.Printf("✗ [导出组(含文本)] %s 失败: %v\n", node.Name, err)
+		return nil
+	}
+	attrs.ImagePath = filepath.Join("processed", fmt.Sprintf("%d", p.project.ID), savedPath)
+
+	// TODO: Export without text version (需要实现 renderGroupWithoutText 逻辑)
+	// Ruby 版本通过隐藏文本图层并重新渲染来实现
+	// Go PSD 库可能不支持这个功能，暂时跳过
+	_ = bounds // Suppress unused variable warning (bounds would be used for no-text version)
+
+	// Create layer record
+	return p.createLayerRecordFromAttrs(attrs)
+}
+
+// handleText processes a text node
+func (p *PSDProcessor) handleText(ctx context.Context, node *psd.Node, attrs *LayerAttributes) *models.Layer {
+	// TODO: Extract text content and font info from node
+	// The psd library's text extraction API needs to be investigated
+	// For now, we'll process it as a regular layer with image
+
+	filename := fmt.Sprintf("text_%s_%s.png", node.Name, generateRandomHex(4))
+	var img image.Image
+	var err error
+	img, err = node.ToPNG()
+	if err != nil || img == nil {
+		if node.Layer != nil {
+			img, err = node.Layer.ToImage()
+		}
+		if err != nil || img == nil {
+			log.Printf("✗ [导出文本] %s 失败: %v\n", node.Name, err)
+			return nil
+		}
+	}
+
+	// Step 1: Clip to canvas
+	clipped, newX, newY, clipErr := p.utils.ClipToCanvas(img, attrs.X, attrs.Y, p.project.Width, p.project.Height)
+	if clipErr != nil {
+		log.Printf("- [跳过文本] %s, 完全超出画布\n", node.Name)
+		return nil
+	}
+
+	img = clipped // img is already image.Image, no type assertion needed
+	attrs.X = newX
+	attrs.Y = newY
+	attrs.Width = clipped.Bounds().Dx()
+	attrs.Height = clipped.Bounds().Dy()
+
+	// Step 2: Aggressive mode processing
+	if p.project.ProcessingMode == "aggressive" {
+		minX, minY, maxX, maxY, foundOpaque := p.utils.AnalyzeTransparency(img)
+		if !foundOpaque {
+			log.Printf("- [跳过文本] %s, 完全透明\n", node.Name)
+			return nil
+		}
+
+		// Crop to non-transparent bounds
+		if minX > 0 || minY > 0 || maxX < img.Bounds().Dx()-1 || maxY < img.Bounds().Dy()-1 {
+			oldWidth, oldHeight := attrs.Width, attrs.Height
+			cropRect := image.Rect(minX, minY, maxX+1, maxY+1)
+			img = cropImage(img, cropRect) // Return value is already image.Image
+			attrs.X += minX
+			attrs.Y += minY
+			attrs.Width = maxX - minX + 1
+			attrs.Height = maxY - minY + 1
+			log.Printf("  [强力裁切] %s(文本): (%dx%d) → (%dx%d), 偏移: (%d, %d)\n",
+				node.Name, oldWidth, oldHeight, attrs.Width, attrs.Height, minX, minY)
+		}
+	}
+
+	// Save scaled images
+	savedPath, err := p.utils.SaveScaledImages(img, p.outputDir, filename, p.project.ExportScales)
+	if err != nil {
+		log.Printf("✗ [导出文本] %s 失败: %v\n", node.Name, err)
+		return nil
+	}
+	attrs.ImagePath = filepath.Join("processed", fmt.Sprintf("%d", p.project.ID), savedPath)
+
+	// Create layer record
+	return p.createLayerRecordFromAttrs(attrs)
+}
+
+// handleLayer processes a regular layer node
+func (p *PSDProcessor) handleLayer(ctx context.Context, node *psd.Node, attrs *LayerAttributes) *models.Layer {
+	filename := fmt.Sprintf("layer_%s_%s.png", node.Name, generateRandomHex(4))
+	var img image.Image
+	var err error
+
+	// Try to get image from node
+	if node.Layer != nil {
+		img, err = node.Layer.ToImage()
+	} else {
+		img, err = node.ToPNG()
+	}
+
+	if err != nil || img == nil {
+		log.Printf("✗ [导出图层] %s 失败: %v\n", node.Name, err)
+		return nil
+	}
+
+	// Step 1: Clip to canvas
+	clipped, newX, newY, clipErr := p.utils.ClipToCanvas(img, attrs.X, attrs.Y, p.project.Width, p.project.Height)
+	if clipErr != nil {
+		log.Printf("- [跳过图层] %s, 完全超出画布\n", node.Name)
+		return nil
+	}
+
+	img = clipped
+	attrs.X = newX
+	attrs.Y = newY
+	attrs.Width = clipped.Bounds().Dx()
+	attrs.Height = clipped.Bounds().Dy()
+
+	// Step 2: Aggressive mode processing
+	if p.project.ProcessingMode == "aggressive" {
+		minX, minY, maxX, maxY, foundOpaque := p.utils.AnalyzeTransparency(img)
+		if !foundOpaque {
+			log.Printf("- [跳过图层] %s, 完全透明\n", node.Name)
+			return nil
+		}
+
+		// Crop to non-transparent bounds
+		if minX > 0 || minY > 0 || maxX < img.Bounds().Dx()-1 || maxY < img.Bounds().Dy()-1 {
+			oldWidth, oldHeight := attrs.Width, attrs.Height
+			cropRect := image.Rect(minX, minY, maxX+1, maxY+1)
+			img = cropImage(img, cropRect)
+			attrs.X += minX
+			attrs.Y += minY
+			attrs.Width = maxX - minX + 1
+			attrs.Height = maxY - minY + 1
+			log.Printf("  [强力裁切] %s(图层): (%dx%d) → (%dx%d), 偏移: (%d, %d)\n",
+				node.Name, oldWidth, oldHeight, attrs.Width, attrs.Height, minX, minY)
+		}
+	}
+
+	// Save scaled images
+	savedPath, err := p.utils.SaveScaledImages(img, p.outputDir, filename, p.project.ExportScales)
+	if err != nil {
+		log.Printf("✗ [导出图层] %s 失败: %v\n", node.Name, err)
+		return nil
+	}
+	attrs.ImagePath = filepath.Join("processed", fmt.Sprintf("%d", p.project.ID), savedPath)
+
+	// Create layer record
+	return p.createLayerRecordFromAttrs(attrs)
+}
+
+// TransparencyBounds holds transparency analysis results
+type TransparencyBounds struct {
+	MinX        int
+	MinY        int
+	MaxX        int
+	MaxY        int
+	FoundOpaque bool
+}
+
+// cropImage crops an image handling different types
+func cropImage(img image.Image, rect image.Rectangle) image.Image {
+	switch v := img.(type) {
+	case *image.RGBA:
+		return v.SubImage(rect)
+	case *image.NRGBA:
+		return v.SubImage(rect)
+	default:
+		// Convert to RGBA first
+		bounds := img.Bounds()
+		rgba := image.NewRGBA(bounds)
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				rgba.Set(x, y, img.At(x, y))
+			}
+		}
+		return rgba.SubImage(rect)
+	}
+}
+
+// createLayerRecordFromAttrs creates a layer record from LayerAttributes
+func (p *PSDProcessor) createLayerRecordFromAttrs(attrs *LayerAttributes) *models.Layer {
+	db := database.GetDB()
+
+	layerRecord := &models.Layer{
+		ProjectID:  attrs.ProjectID,
+		ResourceID: fmt.Sprintf("node_%s", attrs.Name),
+		Name:       attrs.Name,
+		LayerType:  attrs.LayerType,
+		X:          attrs.X,
+		Y:          attrs.Y,
+		Width:      attrs.Width,
+		Height:     attrs.Height,
+		Content:    attrs.Content,
+		ImagePath:  attrs.ImagePath,
+		Metadata:   attrs.Metadata,
+		ParentID:   attrs.ParentID,
+		Hidden:     attrs.Hidden,
+	}
+
+	if err := db.Create(layerRecord).Error; err != nil {
+		log.Printf("✗ 创建图层记录失败: %v\n", err)
+		return nil
+	}
+
+	return layerRecord
+}
+

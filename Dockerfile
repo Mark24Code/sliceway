@@ -19,9 +19,6 @@ WORKDIR /app
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
 
-# Copy local psd library
-COPY psd/ ./psd/
-
 # Download dependencies
 ENV GOPROXY=https://goproxy.cn,direct
 RUN go mod download
