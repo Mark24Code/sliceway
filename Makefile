@@ -82,19 +82,37 @@ build: frontend backend ## 构建完整项目（前端+后端）
 	@echo "$(YELLOW)  后端二进制: ./$(APP_NAME)$(RESET)"
 	@echo "$(YELLOW)  版本: $(VERSION)$(RESET)"
 
-build-prod: ## 生产环境构建（优化）
-	@echo "$(BLUE)>>> 生产环境构建...$(RESET)"
+build-prod: ## 生产环境构建（优化）- 需要 Docker
+	@echo "$(BLUE)>>> 生产环境构建（使用 Docker）...$(RESET)"
+	@echo "$(YELLOW)>>> 注意: 由于 PSD 库依赖 CGO，Linux 版本需要 Docker 构建$(RESET)"
+	@which docker > /dev/null || (echo "$(RED)错误: 需要安装 Docker$(RESET)" && exit 1)
+	@echo "$(YELLOW)>>> 1. 构建前端...$(RESET)"
 	@cd $(FRONTEND_DIR) && npm run build
 	@rm -rf $(DIST_DIR)
-	@mkdir -p $(DIST_DIR)
+	@mkdir -p $(DIST_DIR) $(BUILD_DIR)
 	@cp -r $(FRONTEND_DIR)/dist/* $(DIST_DIR)/
-	@$(GOFLAGS) GOOS=linux GOARCH=amd64 go build $(LDFLAGS) \
-		-o $(BUILD_DIR)/$(APP_NAME)-linux-amd64 ./cmd/server
-	@$(GOFLAGS) GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) \
+	@echo "$(YELLOW)>>> 2. 使用 Docker 构建 Linux AMD64 版本...$(RESET)"
+	@bash scripts/build-linux.sh
+	@echo "$(YELLOW)>>> 3. 构建 macOS AMD64 版本...$(RESET)"
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) \
 		-o $(BUILD_DIR)/$(APP_NAME)-darwin-amd64 ./cmd/server
-	@$(GOFLAGS) GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) \
+	@echo "$(YELLOW)>>> 4. 构建 macOS ARM64 版本...$(RESET)"
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) \
 		-o $(BUILD_DIR)/$(APP_NAME)-darwin-arm64 ./cmd/server
 	@echo "$(GREEN)✓ 生产构建完成: $(BUILD_DIR)/$(RESET)"
+	@ls -lh $(BUILD_DIR)/
+
+build-prod-local: ## 生产环境构建（仅本地平台）
+	@echo "$(BLUE)>>> 本地平台构建...$(RESET)"
+	@cd $(FRONTEND_DIR) && npm run build
+	@rm -rf $(DIST_DIR)
+	@mkdir -p $(DIST_DIR) $(BUILD_DIR)
+	@cp -r $(FRONTEND_DIR)/dist/* $(DIST_DIR)/
+	@echo "$(YELLOW)>>> 构建当前平台版本...$(RESET)"
+	@CGO_ENABLED=1 go build $(LDFLAGS) \
+		-o $(BUILD_DIR)/$(APP_NAME)-$(shell go env GOOS)-$(shell go env GOARCH) ./cmd/server
+	@echo "$(GREEN)✓ 本地构建完成: $(BUILD_DIR)/$(RESET)"
+	@ls -lh $(BUILD_DIR)/
 
 ##@ 运行服务
 

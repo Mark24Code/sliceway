@@ -254,16 +254,55 @@ func (p *PSDProcessor) processNode(ctx context.Context, node *psd.Node, parentID
 		return
 	}
 
-	// Skip empty nodes
+	// Determine layer type first
+	layerType := p.determineNodeType(node)
+
+	// For groups, always process children even if the group itself has no dimensions
+	// Groups might have empty dimensions but contain visible children
+	if layerType == "group" {
+		// Process group node (will handle export if needed)
+		layerRecord := p.handleGroup(ctx, node, &LayerAttributes{
+			ProjectID: p.project.ID,
+			Name:      node.Name,
+			LayerType: layerType,
+			X:         int(node.Left),
+			Y:         int(node.Top),
+			Width:     int(node.Width()),
+			Height:    int(node.Height()),
+			ParentID:  parentID,
+			Hidden:    !node.Visible,
+			Metadata: models.Metadata{
+				"scales":     p.project.ExportScales,
+				"opacity":    node.Opacity,
+				"blend_mode": node.BlendMode,
+			},
+		})
+
+		// Process children regardless of whether the group itself was exported
+		var childParentID *uint
+		if layerRecord != nil {
+			childParentID = &layerRecord.ID
+			log.Printf("✓ [导出%s] %s (%dx%d)\n", layerTypeMap(layerType), node.Name, node.Width(), node.Height())
+			p.processedCount++
+		} else {
+			// If group wasn't exported, children inherit the current parentID
+			childParentID = parentID
+		}
+
+		// Always process children of groups
+		for _, child := range node.Children {
+			p.processNode(ctx, child, childParentID)
+		}
+		return
+	}
+
+	// For non-group nodes, skip if empty
 	if node.Width() <= 0 || node.Height() <= 0 {
 		log.Printf("- [跳过节点] %s, 尺寸: %dx%d\n", node.Name, node.Width(), node.Height())
 		return
 	}
 
-	// Determine layer type
-	layerType := p.determineNodeType(node)
-
-	// Prepare layer attributes
+	// Prepare layer attributes for text and layer types
 	attrs := &LayerAttributes{
 		ProjectID: p.project.ID,
 		Name:      node.Name,
@@ -281,35 +320,21 @@ func (p *PSDProcessor) processNode(ctx context.Context, node *psd.Node, parentID
 		},
 	}
 
-	// Handle different node types
+	// Handle text or regular layer
 	var layerRecord *models.Layer
-	if layerType == "group" {
-		layerRecord = p.handleGroup(ctx, node, attrs)
-	} else if layerType == "text" {
+	if layerType == "text" {
 		layerRecord = p.handleText(ctx, node, attrs)
 	} else {
 		layerRecord = p.handleLayer(ctx, node, attrs)
 	}
 
-	// If handle returned nil, skip this layer (e.g., fully transparent in aggressive mode)
-	if layerRecord == nil && p.project.ProcessingMode == "aggressive" {
-		return
-	}
-
-	// If we couldn't create the record, return
+	// If handle returned nil, skip this layer
 	if layerRecord == nil {
 		return
 	}
 
 	log.Printf("✓ [导出%s] %s (%dx%d)\n", layerTypeMap(layerType), node.Name, attrs.Width, attrs.Height)
 	p.processedCount++
-
-	// Process children if it's a group
-	if node.Type == "group" && len(node.Children) > 0 {
-		for _, child := range node.Children {
-			p.processNode(ctx, child, &layerRecord.ID)
-		}
-	}
 }
 
 func (p *PSDProcessor) createLayerRecord(node *psd.Node, parentID *uint, layerType string, x, y, width, height int, imagePath string) *models.Layer {
@@ -343,6 +368,11 @@ func (p *PSDProcessor) createLayerRecord(node *psd.Node, parentID *uint, layerTy
 }
 
 func (p *PSDProcessor) determineNodeType(node *psd.Node) string {
+	// Check if it's a text layer using the new TypeTool detection
+	if node.IsTextLayer() {
+		return "text"
+	}
+
 	switch node.Type {
 	case "group":
 		return "group"
@@ -369,7 +399,8 @@ func layerTypeMap(t string) string {
 }
 
 func sanitizeFilename(name string) string {
-	// Replace invalid filename characters
+	// Keep UTF-8 characters but remove filesystem-unsafe characters
+	// Only remove: / \ : * ? " < > |
 	replacer := strings.NewReplacer(
 		"/", "_",
 		"\\", "_",
@@ -381,14 +412,24 @@ func sanitizeFilename(name string) string {
 		">", "_",
 		"|", "_",
 	)
+
 	sanitized := replacer.Replace(name)
-	if sanitized == "" {
-		sanitized = "unnamed"
+
+	// Replace spaces with underscores for better compatibility
+	sanitized = strings.ReplaceAll(sanitized, " ", "_")
+
+	// Trim to reasonable length (counting runes, not bytes)
+	runes := []rune(sanitized)
+	if len(runes) > 50 {
+		sanitized = string(runes[:50])
 	}
-	// Limit length
-	if len(sanitized) > 100 {
-		sanitized = sanitized[:100]
+
+	// If empty after sanitization, use hash
+	if len(strings.TrimSpace(sanitized)) == 0 {
+		hash := md5.Sum([]byte(name))
+		sanitized = hex.EncodeToString(hash[:])[:12]
 	}
+
 	return sanitized
 }
 
@@ -401,8 +442,10 @@ func generateRandomHex(n int) string {
 
 // handleGroup processes a group node
 func (p *PSDProcessor) handleGroup(ctx context.Context, node *psd.Node, attrs *LayerAttributes) *models.Layer {
+	safeName := sanitizeFilename(node.Name)
+
 	// Export with text (含文本版本)
-	filenameWith := fmt.Sprintf("group_%s_with_text_%s.png", node.Name, generateRandomHex(4))
+	filenameWith := fmt.Sprintf("group_%s_with_text_%s.png", safeName, generateRandomHex(4))
 	var imgWith image.Image
 	var err error
 	var bounds *TransparencyBounds // Declare bounds first
@@ -466,10 +509,41 @@ func (p *PSDProcessor) handleGroup(ctx context.Context, node *psd.Node, attrs *L
 	}
 	attrs.ImagePath = filepath.Join("processed", fmt.Sprintf("%d", p.project.ID), savedPath)
 
-	// TODO: Export without text version (需要实现 renderGroupWithoutText 逻辑)
-	// Ruby 版本通过隐藏文本图层并重新渲染来实现
-	// Go PSD 库可能不支持这个功能，暂时跳过
-	_ = bounds // Suppress unused variable warning (bounds would be used for no-text version)
+	// Export without text version using ToPNGWithoutText
+	filenameWithout := fmt.Sprintf("group_%s_no_text_%s.png", safeName, generateRandomHex(4))
+	imgWithout, err := node.ToPNGWithoutText()
+	if err == nil && imgWithout != nil {
+		// 使用相同的边界处理逻辑
+		if p.project.ProcessingMode == "aggressive" && bounds != nil && bounds.FoundOpaque {
+			// 对无文字版本也应用相同的裁切
+			cropRect := image.Rect(bounds.MinX, bounds.MinY, bounds.MaxX+1, bounds.MaxY+1)
+			cropped := cropImage(imgWithout, cropRect)
+			// Convert to RGBA if needed
+			if rgbaCropped, ok := cropped.(*image.RGBA); ok {
+				imgWithout = rgbaCropped
+			} else {
+				// Convert to RGBA
+				b := cropped.Bounds()
+				rgbaImg := image.NewRGBA(b)
+				for y := b.Min.Y; y < b.Max.Y; y++ {
+					for x := b.Min.X; x < b.Max.X; x++ {
+						rgbaImg.Set(x, y, cropped.At(x, y))
+					}
+				}
+				imgWithout = rgbaImg
+			}
+		}
+
+		savedPathWithout, err := p.utils.SaveScaledImages(imgWithout, p.outputDir, filenameWithout, p.project.ExportScales)
+		if err == nil {
+			// 将不含文字的路径保存到 metadata
+			if attrs.Metadata == nil {
+				attrs.Metadata = models.Metadata{}
+			}
+			attrs.Metadata["image_path_no_text"] = filepath.Join("processed", fmt.Sprintf("%d", p.project.ID), savedPathWithout)
+			log.Printf("  ✓ [导出组(无文本)] %s\n", node.Name)
+		}
+	}
 
 	// Create layer record
 	return p.createLayerRecordFromAttrs(attrs)
@@ -477,11 +551,31 @@ func (p *PSDProcessor) handleGroup(ctx context.Context, node *psd.Node, attrs *L
 
 // handleText processes a text node
 func (p *PSDProcessor) handleText(ctx context.Context, node *psd.Node, attrs *LayerAttributes) *models.Layer {
-	// TODO: Extract text content and font info from node
-	// The psd library's text extraction API needs to be investigated
-	// For now, we'll process it as a regular layer with image
+	safeName := sanitizeFilename(node.Name)
 
-	filename := fmt.Sprintf("text_%s_%s.png", node.Name, generateRandomHex(4))
+	// Extract text content using new TypeTool API
+	textContent := node.GetTextContent()
+	if textContent != "" {
+		attrs.Content = textContent
+		log.Printf("  [文本内容] %s: \"%s\"\n", node.Name, textContent)
+	}
+
+	// Extract font info if available
+	if textInfo := node.GetTextInfo(); textInfo != nil {
+		if attrs.Metadata == nil {
+			attrs.Metadata = models.Metadata{}
+		}
+		fonts := textInfo.Fonts()
+		if len(fonts) > 0 {
+			attrs.Metadata["fonts"] = fonts
+		}
+		sizes := textInfo.Sizes()
+		if len(sizes) > 0 {
+			attrs.Metadata["font_sizes"] = sizes
+		}
+	}
+
+	filename := fmt.Sprintf("text_%s_%s.png", safeName, generateRandomHex(4))
 	var img image.Image
 	var err error
 	img, err = node.ToPNG()
@@ -544,7 +638,8 @@ func (p *PSDProcessor) handleText(ctx context.Context, node *psd.Node, attrs *La
 
 // handleLayer processes a regular layer node
 func (p *PSDProcessor) handleLayer(ctx context.Context, node *psd.Node, attrs *LayerAttributes) *models.Layer {
-	filename := fmt.Sprintf("layer_%s_%s.png", node.Name, generateRandomHex(4))
+	safeName := sanitizeFilename(node.Name)
+	filename := fmt.Sprintf("layer_%s_%s.png", safeName, generateRandomHex(4))
 	var img image.Image
 	var err error
 

@@ -1,0 +1,55 @@
+# 多阶段构建 Dockerfile - 用于生产构建
+# 阶段1: 前端构建
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# 阶段2: Go 后端构建 (Linux)
+FROM golang:1.23-alpine AS backend-builder
+
+# 安装构建依赖
+RUN apk add --no-cache gcc g++ musl-dev
+
+WORKDIR /app
+
+# 设置 Go 代理
+ENV GOPROXY=https://goproxy.cn,direct
+
+# 复制 go 依赖文件
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 复制源代码
+COPY . .
+
+# 构建 Linux AMD64 二进制文件并输出到 /output
+RUN mkdir -p /output && \
+    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" \
+    -o /output/server-linux-amd64 \
+    ./cmd/server
+
+# 阶段3: 最终镜像（可选，用于直接运行）
+FROM alpine:latest AS runtime
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+# 从构建阶段复制产物
+COPY --from=frontend-builder /app/frontend/dist ./dist
+COPY --from=backend-builder /output/server-linux-amd64 ./server
+
+# 创建必要的目录
+RUN mkdir -p /app/db /app/uploads /app/public/processed /app/exports
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+
+EXPOSE 4567
+
+CMD ["./server"]
