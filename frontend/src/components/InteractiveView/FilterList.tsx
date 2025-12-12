@@ -362,7 +362,6 @@ const FilterList: React.FC = () => {
                             cover={
                                 <div
                                     className="cover"
-                                    onClick={() => toggleSelection(layer.id)}
                                     style={{
                                         position: 'relative',
                                         opacity: layer.hidden ? 0.6 : 1,
